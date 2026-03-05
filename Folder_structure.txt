@@ -1,0 +1,58 @@
+📁 virtual-lab/	Root repo
+  📄 .env.example	Template env vars — commit this, NOT .env
+  📄 README.md	Setup guide, team conventions
+  📁 frontend/	React + Vite application
+    📄 vite.config.js	Vite config, proxy to backend :8000
+    📄 index.html	HTML shell
+    📁 src/	All React source
+      📄 main.jsx	App entry point
+      📄 App.jsx	Router root, auth guard
+      📁 pages/	Route-level page components
+        📄 LoginPage.jsx	Auth: login + register tabs
+        📄 StudentDashboard.jsx	Student home: todo, whiteboard, courses
+        📄 InstructorDashboard.jsx	Instructor home: courses, reports
+        📄 CoursePage.jsx	Course detail: materials + assignments list
+        📄 AssignmentSolvePage.jsx	Monaco editor + AI hint panel
+        📄 TheoryPage.jsx	Reference links, PDFs, videos
+      📁 components/	Shared / feature components
+        📁 auth/	ProtectedRoute, RoleGuard
+        📁 layout/	Sidebar, Navbar, AppShell
+        📁 student/	TodoList, Whiteboard, CourseCard
+        📁 instructor/	CourseForm, AssignmentForm, ReportCard
+        📁 assignment/	CodeEditor, HintPanel, TimerBar
+        📁 shared/	Button, Modal, Spinner, Badge
+      📁 hooks/	Custom React hooks
+        📄 useAuth.js	Supabase auth state
+        📄 useCourse.js	Course CRUD hooks
+        📄 useAssignment.js	Assignment submit + stats
+        📄 useAIHint.js	Stream hint from AI endpoint
+      📁 store/	Zustand global state
+        📄 authStore.js	user, role, session
+        📄 uiStore.js	sidebar open, theme
+      📁 api/	Axios instances + endpoint fns
+        📄 client.js	Axios base URL, interceptors, token inject
+        📄 courses.js	createCourse, getCourses, joinCourse
+        📄 assignments.js	getAssignment, submitAssignment
+        📄 ai.js	getHint(code, question), generateReport
+      📁 utils/	Helpers
+        📄 noPaste.js	Block paste event on editor wrapper
+        📄 formatTime.js	ms → mm:ss for timer
+  📁 backend/	FastAPI application
+    📄 main.py	FastAPI app, CORS, router mounts
+    📄 requirements.txt	Python deps
+    📁 app/	Application modules
+      📁 routers/	FastAPI routers
+        📄 auth.py	Verify Supabase JWT middleware
+        📄 courses.py	POST /courses, GET /courses, POST /join
+        📄 assignments.py	CRUD + submit endpoint
+        📄 ai.py	POST /ai/hint, POST /ai/report (Claude API)
+        📄 theory.py	GET /theory (reference materials)
+      📁 models/	Pydantic schemas
+        📄 course.py	CourseCreate, CourseOut
+        📄 assignment.py	AssignmentCreate, Submission, Stats
+        📄 ai.py	HintRequest, HintResponse, ReportRequest
+      📁 services/	Business logic
+        📄 supabase.py	Supabase admin client (service key)
+        📄 ai_service.py	Anthropic SDK calls, prompt templates
+        📄 stats_service.py	Aggregate submission stats for reports
+    📁 tests/	pytest test suites

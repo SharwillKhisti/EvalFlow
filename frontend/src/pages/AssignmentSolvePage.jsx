@@ -1,0 +1,1 @@
+// Monaco editor + AI hint panel
