@@ -3,69 +3,74 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { supabase } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import AppShell from '../components/layout/AppShell'
+import TopNav from '../components/layout/TopNav'
 
 const NAV = [
-  { to: '/instructor',          icon: '🏠', label: 'Home'        },
-  { to: '/instructor/courses',  icon: '📚', label: 'My Courses'  },
-  { to: '/instructor/reports',  icon: '📊', label: 'Reports'     },
+  { to: '/instructor',           icon: '🏠', label: 'Home',      end: true },
+  { to: '/instructor/courses',   icon: '📚', label: 'Courses'    },
+  { to: '/instructor/analytics', icon: '📊', label: 'Analytics'  },
+  { to: '/instructor/reports',   icon: '📋', label: 'Reports'    },
 ]
 
-// ── Create Course Modal ───────────────────────────────────────────────────────
+// ── Create Course Modal ───────────────────────────────────────
 function CreateCourseModal({ onClose, onCreated }) {
   const { user } = useAuthStore()
-  const [title, setTitle]       = useState('')
-  const [desc, setDesc]         = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [title, setTitle]   = useState('')
+  const [desc, setDesc]     = useState('')
+  const [slug, setSlug]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]   = useState('')
+
+  const SLUGS = [
+    { value: 'python', label: '🐍 Python' },
+    { value: 'c',      label: '⚙️ C' },
+    { value: 'cpp',    label: '➕ C++' },
+    { value: 'ds',     label: '🌳 Data Structures' },
+    { value: 'oop',    label: '🧱 OOP' },
+  ]
 
   async function handleCreate(e) {
     e.preventDefault()
     if (!title.trim()) return
-    setLoading(true)
-    setError('')
-
-    const { data, error: err } = await supabase
-      .from('courses')
-      .insert({ title: title.trim(), description: desc.trim(), instructor_id: user.id })
+    setLoading(true); setError('')
+    const { data, error: err } = await supabase.from('courses')
+      .insert({ title: title.trim(), description: desc.trim(), course_slug: slug || null, instructor_id: user.id })
       .select().single()
-
     setLoading(false)
     if (err) { setError(err.message); return }
     onCreated(data)
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md shadow-2xl">
-        <h2 className="text-xl font-bold text-white mb-6">Create New Course</h2>
-        {error && <p className="mb-4 text-red-400 text-sm">{error}</p>}
-        <form onSubmit={handleCreate} className="space-y-4">
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box">
+        <h2 className="text-h2" style={{ marginBottom: 6 }}>Create New Course</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 24 }}>Set up a new course for your students</p>
+        {error && <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#DC2626', fontSize: '0.85rem' }}>{error}</div>}
+        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Course Title</label>
-            <input value={title} onChange={e => setTitle(e.target.value)}
-              required placeholder="e.g. Data Structures & Algorithms"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5
-                         text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors" />
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Course Title *</label>
+            <input className="input" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Data Structures & Algorithms" />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Description</label>
-            <textarea value={desc} onChange={e => setDesc(e.target.value)}
-              placeholder="Brief course overview..."
-              rows={3}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5
-                         text-white placeholder-gray-500 focus:outline-none focus:border-blue-500
-                         transition-colors resize-none" />
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Course Type</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {SLUGS.map(s => (
+                <button type="button" key={s.value} onClick={() => setSlug(s.value)}
+                  style={{ padding: '8px 6px', borderRadius: 10, border: `2px solid ${slug === s.value ? 'var(--sky-500)' : 'var(--border)'}`, background: slug === s.value ? 'var(--sky-50)' : 'white', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 500, color: slug === s.value ? 'var(--sky-700)' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg transition-colors">
-              Cancel
-            </button>
-            <button type="submit" disabled={loading || !title.trim()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700
-                         disabled:cursor-not-allowed text-white py-2.5 rounded-lg font-medium transition-colors">
-              {loading ? 'Creating...' : 'Create Course'}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Description</label>
+            <textarea className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Brief overview..." rows={3} style={{ resize: 'none' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+            <button type="button" onClick={onClose} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+            <button type="submit" disabled={loading || !title.trim()} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+              {loading ? 'Creating...' : '+ Create Course'}
             </button>
           </div>
         </form>
@@ -74,26 +79,75 @@ function CreateCourseModal({ onClose, onCreated }) {
   )
 }
 
-// ── Instructor Home ───────────────────────────────────────────────────────────
+// ── Instructor Stat Card ──────────────────────────────────────
+function IStatCard({ icon, label, value, sub, color = 'var(--sky-600)', delay = 1 }) {
+  return (
+    <div className={`stat-card animate-fade-up stagger-${delay}`}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
+      </div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ── Course card (instructor view) ─────────────────────────────
+function InstructorCourseCard({ course, onClick, index }) {
+  const slugColors = { python:'#3B82F6', c:'#8B5CF6', cpp:'#EC4899', ds:'#10B981', oop:'#F59E0B' }
+  const color = slugColors[course.course_slug] || '#3B82F6'
+
+  return (
+    <button onClick={onClick}
+      className={`animate-fade-up stagger-${(index % 4) + 2}`}
+      style={{ background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', padding: '20px', cursor: 'pointer', textAlign: 'left', boxShadow: 'var(--shadow-sm)', transition: 'all 0.25s ease', width: '100%' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = color + '60' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📘</div>
+        <div style={{ background: color + '18', color: color, borderRadius: 100, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+          {course.join_code}
+        </div>
+      </div>
+
+      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.3 }}>
+        {course.title}
+      </h3>
+      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 14, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {course.description || 'No description'}
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '0.75rem', color, fontWeight: 600 }}>Manage →</span>
+        {course.course_slug && <span className="badge" style={{ background: color + '15', color }}>{course.course_slug.toUpperCase()}</span>}
+      </div>
+    </button>
+  )
+}
+
+// ── Instructor Home ───────────────────────────────────────────
 function InstructorHome() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [courses, setCourses]     = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [newCourse, setNewCourse] = useState(null)
   const [loading, setLoading]     = useState(true)
-  const [newCourse, setNewCourse] = useState(null) // show join code after creation
 
   const fullName  = user?.user_metadata?.full_name || 'Instructor'
   const firstName = fullName.split(' ')[0]
+  const hour      = new Date().getHours()
+  const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   useEffect(() => { fetchCourses() }, [])
 
   async function fetchCourses() {
     setLoading(true)
-    const { data } = await supabase
-      .from('courses').select('*')
-      .eq('instructor_id', user.id)
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('courses').select('*').eq('instructor_id', user.id).order('created_at', { ascending: false })
     setCourses(data || [])
     setLoading(false)
   }
@@ -105,122 +159,128 @@ function InstructorHome() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {showModal && <CreateCourseModal onClose={() => setShowModal(false)} onCreated={handleCreated} />}
 
-      {showModal && (
-        <CreateCourseModal
-          onClose={() => setShowModal(false)}
-          onCreated={handleCreated}
-        />
-      )}
-
-      {/* Greeting */}
-      <div className="flex items-start justify-between mb-8 gap-4">
+      {/* Header */}
+      <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="text-3xl font-bold text-white">Welcome, {firstName} 👨‍🏫</h1>
-          <p className="text-gray-400 mt-1">
-            {courses.length === 0
-              ? "Create your first course to get started."
-              : `Managing ${courses.length} course${courses.length > 1 ? 's' : ''}.`
-            }
-          </p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 4 }}>{greeting} ☀️</p>
+          <h1 className="text-h1">Welcome, Prof. {firstName}!</h1>
         </div>
-        <button onClick={() => setShowModal(true)}
-          className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5
-                     rounded-xl font-medium transition-colors flex items-center gap-2">
-          <span>+</span> New Course
+        <button onClick={() => setShowModal(true)} className="btn btn-primary">
+          + New Course
         </button>
       </div>
 
       {/* New course join code banner */}
       {newCourse && (
-        <div className="mb-6 bg-green-950 border border-green-700 rounded-2xl p-5 flex items-center justify-between">
+        <div className="animate-fade-up" style={{ background: 'linear-gradient(135deg, #065F46, #047857)', borderRadius: 'var(--radius-md)', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white' }}>
           <div>
-            <p className="text-green-300 font-semibold">"{newCourse.title}" created!</p>
-            <p className="text-green-500 text-sm mt-1">Share this code with your students:</p>
-            <p className="text-white font-mono text-2xl font-bold tracking-widest mt-1">
-              {newCourse.join_code}
-            </p>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>✅ Course created! Share this code with your students:</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.6rem', letterSpacing: '0.15em' }}>{newCourse.join_code}</span>
+              <span style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>— {newCourse.title}</span>
+            </div>
           </div>
-          <button onClick={() => setNewCourse(null)}
-            className="text-green-600 hover:text-green-400 text-2xl transition-colors">×</button>
+          <button onClick={() => setNewCourse(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
       )}
 
-      {/* Course grid */}
-      <h2 className="text-white font-semibold text-lg mb-4">My Courses</h2>
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i=>(
-            <div key={i} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 animate-pulse">
-              <div className="h-4 bg-gray-800 rounded mb-3 w-3/4"/>
-              <div className="h-3 bg-gray-800 rounded w-full mb-2"/>
-              <div className="h-3 bg-gray-800 rounded w-1/2"/>
-            </div>
-          ))}
+      {/* Stats */}
+      <div className="bento bento-4">
+        <IStatCard icon="📚" label="COURSES" value={courses.length} sub="Active courses" delay={1} />
+        <IStatCard icon="👥" label="STUDENTS" value="—" sub="Total enrolled" color="#8B5CF6" delay={2} />
+        <IStatCard icon="📝" label="ASSIGNMENTS" value="—" sub="Generated & approved" color="#F59E0B" delay={3} />
+        <IStatCard icon="📊" label="AVG SCORE" value="—" sub="Class average" color="#10B981" delay={4} />
+      </div>
+
+      {/* Courses grid */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h2 className="text-h2">My Courses</h2>
+          <button onClick={() => navigate('/instructor/courses')} className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>View all →</button>
         </div>
-      ) : courses.length === 0 ? (
-        <div className="bg-gray-900 border border-dashed border-gray-700 rounded-2xl p-12 text-center">
-          <div className="text-4xl mb-3">📚</div>
-          <p className="text-gray-400">No courses yet</p>
-          <button onClick={() => setShowModal(true)}
-            className="mt-4 text-blue-500 hover:text-blue-400 text-sm transition-colors">
-            Create your first course →
+
+        {loading ? (
+          <div className="bento bento-3">
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />)}
+          </div>
+        ) : courses.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 24px', background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border-blue)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
+            <p style={{ color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 8 }}>No courses yet</p>
+            <button onClick={() => setShowModal(true)} className="btn btn-primary">Create your first course</button>
+          </div>
+        ) : (
+          <div className="bento bento-3">
+            {courses.map((course, i) => (
+              <InstructorCourseCard key={course.id} course={course} index={i}
+                onClick={() => navigate(`/instructor/courses/${course.id}`)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom promo cards */}
+      <div className="bento bento-2">
+        <div className="card-blue animate-fade-up stagger-5">
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 6 }}>AI Assignment Generator</h3>
+            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>Auto-generate unit-wise coding assignments and theory quizzes from your syllabus. Review and approve in one click.</p>
+          </div>
+        </div>
+        <div className="card animate-fade-up stagger-6" style={{ background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)', border: '1px solid #FDE68A' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>📊</div>
+          <h3 className="text-h3" style={{ marginBottom: 6, color: '#92400E' }}>Analytics Dashboard</h3>
+          <p style={{ fontSize: '0.82rem', color: '#B45309', lineHeight: 1.6 }}>Track class performance, filter by division and batch, and identify students who need extra support.</p>
+          <button onClick={() => navigate('/instructor/analytics')} className="btn" style={{ marginTop: 12, background: '#F59E0B', color: 'white', padding: '8px 16px', fontSize: '0.8rem' }}>
+            View Analytics →
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map(course => (
-            <button key={course.id}
-              onClick={() => navigate(`/instructor/courses/${course.id}`)}
-              className="bg-gray-900 border border-gray-800 hover:border-purple-600 rounded-2xl p-6
-                         text-left transition-all hover:shadow-lg hover:shadow-purple-950 group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 bg-purple-950 rounded-xl flex items-center justify-center
-                                group-hover:bg-purple-700 transition-colors">
-                  <span className="text-xl">📘</span>
-                </div>
-                <span className="font-mono text-xs text-gray-600 bg-gray-800 px-2 py-1 rounded-md">
-                  {course.join_code}
-                </span>
-              </div>
-              <h3 className="text-white font-semibold mb-2 group-hover:text-purple-300 transition-colors">
-                {course.title}
-              </h3>
-              <p className="text-gray-500 text-sm line-clamp-2">
-                {course.description || 'No description provided'}
-              </p>
-              <div className="mt-4 text-purple-500 text-xs font-medium">
-                Manage course →
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   )
 }
 
-// ── Reports stub ──────────────────────────────────────────────────────────────
+// ── Analytics stub ────────────────────────────────────────────
+function AnalyticsTab() {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">📊</div>
+      <h1 className="text-h1" style={{ marginBottom: 8 }}>Analytics</h1>
+      <p style={{ color: 'var(--text-muted)' }}>Division/batch performance graphs — coming in Phase 4.</p>
+    </div>
+  )
+}
+
+// ── Reports stub ──────────────────────────────────────────────
 function ReportsTab() {
   return (
-    <div className="p-8 max-w-2xl mx-auto text-center">
-      <div className="text-5xl mb-4">📊</div>
-      <h1 className="text-2xl font-bold text-white mb-2">Reports</h1>
-      <p className="text-gray-400">AI-generated assignment reports will appear here in Phase 4.</p>
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">📋</div>
+      <h1 className="text-h1" style={{ marginBottom: 8 }}>Reports</h1>
+      <p style={{ color: 'var(--text-muted)' }}>AI-generated assignment reports — available after student submissions.</p>
     </div>
   )
 }
 
-// ── Root export ───────────────────────────────────────────────────────────────
+// ── Root ──────────────────────────────────────────────────────
 export default function InstructorDashboard() {
   return (
-    <AppShell navItems={NAV}>
-      <Routes>
-        <Route index             element={<InstructorHome />} />
-        <Route path="courses"    element={<InstructorHome />} />
-        <Route path="reports"    element={<ReportsTab />}     />
-      </Routes>
-    </AppShell>
+    <div className="page-bg">
+      <div className="app-shell">
+        <TopNav navItems={NAV} />
+        <main style={{ flex: 1 }}>
+          <Routes>
+            <Route index               element={<InstructorHome />} />
+            <Route path="courses"      element={<InstructorHome />} />
+            <Route path="analytics"    element={<AnalyticsTab />}   />
+            <Route path="reports"      element={<ReportsTab />}     />
+          </Routes>
+        </main>
+      </div>
+    </div>
   )
 }

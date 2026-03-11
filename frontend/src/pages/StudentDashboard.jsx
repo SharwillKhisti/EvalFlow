@@ -3,39 +3,116 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { supabase } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import AppShell from '../components/layout/AppShell'
+import TopNav from '../components/layout/TopNav'
 
 const NAV = [
-  { to: '/student',           icon: '🏠', label: 'Home'       },
-  { to: '/student/courses',   icon: '📚', label: 'My Courses' },
-  { to: '/student/todo',      icon: '✅', label: 'To-Do'      },
-  { to: '/student/whiteboard',icon: '🎨', label: 'Whiteboard' },
-  { to: '/student/theory',    icon: '📖', label: 'Theory'     },
+  { to: '/student',             icon: '🏠', label: 'Home',        end: true },
+  { to: '/student/courses',     icon: '📚', label: 'Courses'      },
+  { to: '/student/todo',        icon: '✅', label: 'To-Do'        },
+  { to: '/student/leaderboard', icon: '🏆', label: 'Leaderboard'  },
+  { to: '/student/whiteboard',  icon: '🎨', label: 'Whiteboard'   },
 ]
 
-// ── Home Tab ─────────────────────────────────────────────────────────────────
+// ── Shared fetch helper ───────────────────────────────────────
+async function fetchEnrolledCourses(userId) {
+  const { data: enrollments } = await supabase
+    .from('enrollments')
+    .select('course_id')
+    .eq('student_id', userId)
+
+  const courseIds = enrollments?.map(e => e.course_id) || []
+  if (courseIds.length === 0) return []
+
+  const { data: courses } = await supabase
+    .from('courses')
+    .select('id, title, description')
+    .in('id', courseIds)
+
+  return courses || []
+}
+
+// ── Stat Card ─────────────────────────────────────────────────
+function StatCard({ icon, label, value, sub, color = 'var(--sky-600)', delay = 1 }) {
+  return (
+    <div className={`stat-card animate-fade-up stagger-${delay}`}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
+      </div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+        {value}
+      </div>
+      {sub && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ── Course Card ───────────────────────────────────────────────
+function CourseCard({ course, onClick, index }) {
+  const colors = [
+    { bg: 'linear-gradient(135deg, #1565C0, #1E40AF)' },
+    { bg: 'linear-gradient(135deg, #065F46, #047857)' },
+    { bg: 'linear-gradient(135deg, #6D28D9, #7C3AED)' },
+    { bg: 'linear-gradient(135deg, #92400E, #B45309)' },
+    { bg: 'linear-gradient(135deg, #9F1239, #BE123C)' },
+  ]
+  const c = colors[index % colors.length]
+
+  return (
+    <button onClick={onClick}
+      className={`animate-fade-up stagger-${(index % 4) + 2}`}
+      style={{ background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', transition: 'all 0.25s ease', width: '100%' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)' }}>
+      <div style={{ background: c.bg, padding: '20px 20px 16px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ position: 'absolute', bottom: -15, right: 20, width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ fontSize: 28, marginBottom: 8 }}>📘</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'white', lineHeight: 1.3 }}>
+          {course.title}
+        </div>
+      </div>
+      <div style={{ padding: '14px 20px 16px' }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {course.description || 'No description provided'}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--sky-600)', fontWeight: 600 }}>View course →</span>
+          <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--sky-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>→</div>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+// ── Home Tab ──────────────────────────────────────────────────
 function StudentHome() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [courses, setCourses]   = useState([])
+  const [todos, setTodos]       = useState([])
   const [joinCode, setJoinCode] = useState('')
   const [joining, setJoining]   = useState(false)
   const [joinMsg, setJoinMsg]   = useState({ text: '', type: '' })
   const [loading, setLoading]   = useState(true)
-  const navigate = useNavigate()
 
-  const fullName = user?.user_metadata?.full_name || 'Student'
+  const fullName  = user?.user_metadata?.full_name || 'Student'
   const firstName = fullName.split(' ')[0]
+  const hour      = new Date().getHours()
+  const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
-  useEffect(() => { fetchCourses() }, [])
+  useEffect(() => { fetchData() }, [])
 
-  async function fetchCourses() {
+  async function fetchData() {
     setLoading(true)
-    const { data: enrollments } = await supabase
-      .from('enrollments')
-      .select('course_id, courses(id, title, description, created_at)')
-      .eq('student_id', user.id)
-
-    setCourses(enrollments?.map(e => e.courses).filter(Boolean) || [])
+    const [courses, { data: todosData }] = await Promise.all([
+      fetchEnrolledCourses(user.id),
+      supabase.from('todos').select('*').eq('student_id', user.id).eq('is_done', false).limit(5)
+    ])
+    setCourses(courses)
+    setTodos(todosData || [])
     setLoading(false)
   }
 
@@ -45,161 +122,201 @@ function StudentHome() {
     setJoining(true)
     setJoinMsg({ text: '', type: '' })
 
-    // Find course by join code
-    const { data: course, error } = await supabase
+    const { data: course } = await supabase
       .from('courses')
       .select('id, title')
       .eq('join_code', joinCode.trim().toUpperCase())
       .single()
 
-    if (error || !course) {
-      setJoinMsg({ text: 'Invalid join code. Check with your instructor.', type: 'error' })
+    if (!course) {
+      setJoinMsg({ text: 'Invalid code. Check with your instructor.', type: 'error' })
       setJoining(false)
       return
     }
 
-    // Check already enrolled
     const { data: existing } = await supabase
       .from('enrollments')
       .select('id')
       .eq('course_id', course.id)
       .eq('student_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (existing) {
-      setJoinMsg({ text: `You're already enrolled in "${course.title}".`, type: 'error' })
+      setJoinMsg({ text: `Already enrolled in "${course.title}"`, type: 'error' })
       setJoining(false)
       return
     }
 
-    // Enroll
-    const { error: enrollError } = await supabase
+    const { error } = await supabase
       .from('enrollments')
       .insert({ course_id: course.id, student_id: user.id })
 
     setJoining(false)
-    if (enrollError) {
-      setJoinMsg({ text: 'Something went wrong. Try again.', type: 'error' })
+    if (error) {
+      setJoinMsg({ text: 'Something went wrong.', type: 'error' })
     } else {
-      setJoinMsg({ text: `✅ Joined "${course.title}" successfully!`, type: 'success' })
+      setJoinMsg({ text: `✅ Joined "${course.title}"!`, type: 'success' })
       setJoinCode('')
-      fetchCourses()
+      fetchData()
     }
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Greeting */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">
-          Hey, {firstName} 👋
-        </h1>
-        <p className="text-gray-400 mt-1">
-          {courses.length === 0
-            ? "You haven't joined any courses yet. Enter a code below to get started."
-            : `You're enrolled in ${courses.length} course${courses.length > 1 ? 's' : ''}.`
-          }
-        </p>
-      </div>
-
-      {/* Join Course */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
-        <h2 className="text-white font-semibold text-lg mb-1">Join a Course</h2>
-        <p className="text-gray-500 text-sm mb-4">Enter the 8-character code from your instructor</p>
-        <form onSubmit={handleJoin} className="flex gap-3">
-          <input
-            value={joinCode}
-            onChange={e => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="e.g. AB12CD34"
-            maxLength={8}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5
-                       text-white placeholder-gray-500 font-mono tracking-widest uppercase
-                       focus:outline-none focus:border-blue-500 transition-colors" />
-          <button type="submit" disabled={joining || joinCode.length < 6}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed
-                       text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
-            {joining ? 'Joining...' : 'Join'}
+      {/* Header */}
+      <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 4 }}>{greeting} ☀️</p>
+          <h1 className="text-h1">Welcome back, {firstName}!</h1>
+        </div>
+        <form onSubmit={handleJoin} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())}
+            placeholder="Enter join code" maxLength={8}
+            style={{ padding: '10px 16px', borderRadius: 100, border: '1.5px solid var(--border-blue)', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)', fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.1em', fontSize: '0.85rem', outline: 'none', width: 160 }} />
+          <button type="submit" disabled={joining || joinCode.length < 6} className="btn btn-primary" style={{ padding: '10px 20px' }}>
+            {joining ? '...' : '+ Join Course'}
           </button>
         </form>
-        {joinMsg.text && (
-          <p className={`mt-3 text-sm ${joinMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
-            {joinMsg.text}
-          </p>
-        )}
       </div>
 
-      {/* Course Cards */}
-      <div>
-        <h2 className="text-white font-semibold text-lg mb-4">My Courses</h2>
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1,2,3].map(i => (
-              <div key={i} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 animate-pulse">
-                <div className="h-4 bg-gray-800 rounded mb-3 w-3/4" />
-                <div className="h-3 bg-gray-800 rounded w-full mb-2" />
-                <div className="h-3 bg-gray-800 rounded w-2/3" />
+      {joinMsg.text && (
+        <div style={{ background: joinMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7', border: `1px solid ${joinMsg.type === 'error' ? '#FCA5A5' : '#86EFAC'}`, borderRadius: 'var(--radius-sm)', padding: '10px 16px', fontSize: '0.85rem', color: joinMsg.type === 'error' ? '#DC2626' : '#15803D' }}>
+          {joinMsg.text}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="bento bento-4">
+        <StatCard icon="📚" label="ENROLLED"     value={courses.length} sub="Active courses"  delay={1} />
+        <StatCard icon="✅" label="PENDING TASKS" value={todos.length}   sub="To-do items"     color="#8B5CF6" delay={2} />
+        <StatCard icon="🏆" label="BADGES"        value="0"              sub="Earned so far"   color="#F59E0B" delay={3} />
+        <StatCard icon="🔥" label="STREAK"        value="1"              sub="Days active"     color="#EF4444" delay={4} />
+      </div>
+
+      {/* Main grid */}
+      <div className="bento bento-3">
+
+        {/* Courses — span 2 */}
+        <div className="col-span-2">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h2 className="text-h2">My Courses</h2>
+            <button onClick={() => navigate('/student/courses')} className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>View all →</button>
+          </div>
+          {loading ? (
+            <div className="bento bento-2">
+              {[1, 2].map(i => <div key={i} className="skeleton" style={{ height: 160, borderRadius: 'var(--radius-md)' }} />)}
+            </div>
+          ) : courses.length === 0 ? (
+            <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border-blue)', padding: '40px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>📚</div>
+              <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>No courses yet</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: 4 }}>Enter a join code above to get started</p>
+            </div>
+          ) : (
+            <div className="bento bento-2">
+              {courses.slice(0, 4).map((course, i) => (
+                <CourseCard key={course.id} course={course} index={i}
+                  onClick={() => navigate(`/student/courses/${course.id}`)} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Quick todo */}
+          <div className="card animate-fade-up stagger-3">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 className="text-h3">Pending Tasks</h3>
+              <button onClick={() => navigate('/student/todo')} className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '4px 8px' }}>All →</button>
+            </div>
+            {todos.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '16px 0' }}>All caught up! 🎉</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {todos.map(todo => (
+                  <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--sky-50)' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sky-400)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todo.title}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        ) : courses.length === 0 ? (
-          <div className="bg-gray-900 border border-dashed border-gray-700 rounded-2xl p-12 text-center">
-            <div className="text-4xl mb-3">📚</div>
-            <p className="text-gray-400">No courses yet</p>
-            <p className="text-gray-600 text-sm mt-1">Join one using a code above</p>
+
+          {/* AI promo card */}
+          <div className="card-blue animate-fade-up stagger-4" style={{ flex: 1 }}>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', marginBottom: 6 }}>AI Lab Assistant</h3>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>Stuck on an assignment? Get a contextual hint that guides you — not the answer.</p>
+              <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 100, padding: '6px 12px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)' }}>
+                ✨ Available on every assignment
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {courses.map(course => (
-              <button key={course.id}
-                onClick={() => navigate(`/student/courses/${course.id}`)}
-                className="bg-gray-900 border border-gray-800 hover:border-blue-600 rounded-2xl p-6
-                           text-left transition-all hover:shadow-lg hover:shadow-blue-950 group">
-                <div className="w-10 h-10 bg-blue-950 rounded-xl flex items-center justify-center mb-4
-                                group-hover:bg-blue-600 transition-colors">
-                  <span className="text-xl">📘</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2 group-hover:text-blue-300 transition-colors">
-                  {course.title}
-                </h3>
-                <p className="text-gray-500 text-sm line-clamp-2">
-                  {course.description || 'No description provided'}
-                </p>
-                <div className="mt-4 text-blue-500 text-xs font-medium">
-                  View course →
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
 }
 
-// ── Todo Tab ──────────────────────────────────────────────────────────────────
+// ── Courses Tab ───────────────────────────────────────────────
+function CoursesTab() {
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchEnrolledCourses(user.id).then(data => {
+      setCourses(data)
+      setLoading(false)
+    })
+  }, [])
+
+  return (
+    <div>
+      <h1 className="text-h1 animate-fade-up" style={{ marginBottom: 20 }}>My Courses</h1>
+      {loading ? (
+        <div className="bento bento-3">
+          {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />)}
+        </div>
+      ) : courses.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 24px', background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
+          <p style={{ color: 'var(--text-secondary)' }}>You haven't joined any courses yet.</p>
+        </div>
+      ) : (
+        <div className="bento bento-3">
+          {courses.map((course, i) => (
+            <CourseCard key={course.id} course={course} index={i}
+              onClick={() => navigate(`/student/courses/${course.id}`)} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Todo Tab ──────────────────────────────────────────────────
 function TodoTab() {
   const { user } = useAuthStore()
   const [todos, setTodos]     = useState([])
   const [newTask, setNewTask] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchTodos() }, [])
-
-  async function fetchTodos() {
-    const { data } = await supabase
-      .from('todos').select('*')
-      .eq('student_id', user.id)
-      .order('created_at', { ascending: false })
-    setTodos(data || [])
-    setLoading(false)
-  }
+  useEffect(() => {
+    supabase.from('todos').select('*').eq('student_id', user.id).order('created_at', { ascending: false })
+      .then(({ data }) => { setTodos(data || []); setLoading(false) })
+  }, [])
 
   async function addTodo(e) {
     e.preventDefault()
     if (!newTask.trim()) return
-    const { data } = await supabase
-      .from('todos')
+    const { data } = await supabase.from('todos')
       .insert({ student_id: user.id, title: newTask.trim() })
       .select().single()
     if (data) { setTodos(prev => [data, ...prev]); setNewTask('') }
@@ -216,127 +333,128 @@ function TodoTab() {
   }
 
   const pending   = todos.filter(t => !t.is_done)
-  const completed = todos.filter(t => t.is_done)
+  const completed = todos.filter(t =>  t.is_done)
+  const pct       = todos.length ? Math.round((completed.length / todos.length) * 100) : 0
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-2">To-Do List</h1>
-      <p className="text-gray-400 text-sm mb-8">Track your tasks and assignments</p>
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <div className="animate-fade-up" style={{ marginBottom: 24 }}>
+        <h1 className="text-h1" style={{ marginBottom: 4 }}>To-Do List</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Track your tasks and study goals</p>
+      </div>
 
-      {/* Add task */}
-      <form onSubmit={addTodo} className="flex gap-3 mb-8">
+      {todos.length > 0 && (
+        <div className="card animate-fade-up stagger-1" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Overall Progress</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--sky-600)' }}>{pct}%</span>
+          </div>
+          <div className="progress-track"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 8 }}>{completed.length} of {todos.length} tasks completed</p>
+        </div>
+      )}
+
+      <form onSubmit={addTodo} className="animate-fade-up stagger-2" style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
         <input value={newTask} onChange={e => setNewTask(e.target.value)}
-          placeholder="Add a new task..."
-          className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5
-                     text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors" />
-        <button type="submit" disabled={!newTask.trim()}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-800 disabled:cursor-not-allowed
-                     text-white px-5 py-2.5 rounded-lg font-medium transition-colors">
-          Add
-        </button>
+          placeholder="Add a new task..." className="input" style={{ flex: 1 }} />
+        <button type="submit" disabled={!newTask.trim()} className="btn btn-primary">Add</button>
       </form>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i=><div key={i} className="h-14 bg-gray-900 rounded-xl animate-pulse"/>)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 52, borderRadius: 10 }} />)}
         </div>
       ) : (
-        <>
-          {/* Pending */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {pending.length > 0 && (
-            <div className="mb-6">
-              <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-3">
-                Pending · {pending.length}
-              </p>
-              <div className="space-y-2">
+            <div>
+              <p className="text-label" style={{ marginBottom: 10 }}>Pending · {pending.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {pending.map(todo => (
-                  <div key={todo.id}
-                    className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 group">
+                  <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'white', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                     <button onClick={() => toggleTodo(todo.id, todo.is_done)}
-                      className="w-5 h-5 rounded-full border-2 border-gray-600 hover:border-blue-500
-                                 flex items-center justify-center shrink-0 transition-colors" />
-                    <span className="flex-1 text-white text-sm">{todo.title}</span>
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--sky-300)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                      onMouseEnter={e => e.target.style.borderColor = 'var(--sky-500)'}
+                      onMouseLeave={e => e.target.style.borderColor = 'var(--sky-300)'} />
+                    <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{todo.title}</span>
                     <button onClick={() => deleteTodo(todo.id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400
-                                 transition-all text-lg leading-none">×</button>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1, padding: '0 4px' }}
+                      onMouseEnter={e => e.target.style.color = '#EF4444'}
+                      onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>×</button>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
-          {/* Completed */}
           {completed.length > 0 && (
             <div>
-              <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-3">
-                Completed · {completed.length}
-              </p>
-              <div className="space-y-2">
+              <p className="text-label" style={{ marginBottom: 10 }}>Completed · {completed.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {completed.map(todo => (
-                  <div key={todo.id}
-                    className="flex items-center gap-3 bg-gray-900/50 border border-gray-800/50 rounded-xl px-4 py-3 group">
+                  <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F0FDF4', borderRadius: 10, padding: '12px 16px', border: '1px solid #86EFAC', opacity: 0.8 }}>
                     <button onClick={() => toggleTodo(todo.id, todo.is_done)}
-                      className="w-5 h-5 rounded-full bg-green-600 border-2 border-green-600
-                                 flex items-center justify-center shrink-0 text-white text-xs">✓</button>
-                    <span className="flex-1 text-gray-600 text-sm line-through">{todo.title}</span>
+                      style={{ width: 22, height: 22, borderRadius: '50%', background: '#22C55E', border: 'none', cursor: 'pointer', color: 'white', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
+                    <span style={{ flex: 1, fontSize: '0.875rem', color: '#64748B', textDecoration: 'line-through' }}>{todo.title}</span>
                     <button onClick={() => deleteTodo(todo.id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-700 hover:text-red-400
-                                 transition-all text-lg leading-none">×</button>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: 18 }}>×</button>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
           {todos.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-4xl mb-3">✅</div>
-              <p className="text-gray-500">No tasks yet. Add one above!</p>
+            <div style={{ textAlign: 'center', padding: '40px 24px', background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
+              <p style={{ color: 'var(--text-secondary)' }}>No tasks yet. Add one above!</p>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )
 }
 
-// ── Whiteboard Tab ────────────────────────────────────────────────────────────
+// ── Leaderboard stub ──────────────────────────────────────────
+function LeaderboardTab() {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">🏆</div>
+      <h1 className="text-h1" style={{ marginBottom: 8 }}>Leaderboard</h1>
+      <p style={{ color: 'var(--text-muted)' }}>Rankings will appear here once assignments are submitted.</p>
+    </div>
+  )
+}
+
+// ── Whiteboard stub ───────────────────────────────────────────
 function WhiteboardTab() {
   return (
-    <div className="p-8 max-w-2xl mx-auto text-center">
-      <div className="text-5xl mb-4">🎨</div>
-      <h1 className="text-2xl font-bold text-white mb-2">Whiteboard</h1>
-      <p className="text-gray-400 mb-6">Excalidraw will be embedded here in Phase 4.</p>
-      <div className="bg-gray-900 border border-dashed border-gray-700 rounded-2xl h-96
-                      flex items-center justify-center">
-        <p className="text-gray-600 text-sm">Whiteboard coming soon</p>
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">🎨</div>
+      <h1 className="text-h1" style={{ marginBottom: 8 }}>Whiteboard</h1>
+      <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Excalidraw whiteboard — coming in Phase 4.</p>
+      <div style={{ height: 320, background: 'rgba(255,255,255,0.6)', border: '2px dashed var(--border-blue)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Whiteboard canvas coming soon</p>
       </div>
     </div>
   )
 }
 
-// ── Theory Tab ────────────────────────────────────────────────────────────────
-function TheoryTab() {
-  return (
-    <div className="p-8 max-w-2xl mx-auto text-center">
-      <div className="text-5xl mb-4">📖</div>
-      <h1 className="text-2xl font-bold text-white mb-2">Theory & References</h1>
-      <p className="text-gray-400">Select a course to view its reference materials.</p>
-    </div>
-  )
-}
-
-// ── Root export ───────────────────────────────────────────────────────────────
+// ── Root ──────────────────────────────────────────────────────
 export default function StudentDashboard() {
   return (
-    <AppShell navItems={NAV}>
-      <Routes>
-        <Route index        element={<StudentHome />}    />
-        <Route path="courses"    element={<StudentHome />} />
-        <Route path="todo"       element={<TodoTab />}     />
-        <Route path="whiteboard" element={<WhiteboardTab />} />
-        <Route path="theory"     element={<TheoryTab />}   />
-      </Routes>
-    </AppShell>
+    <div className="page-bg">
+      <div className="app-shell">
+        <TopNav navItems={NAV} />
+        <main style={{ flex: 1, minHeight: 0 }}>
+          <Routes>
+            <Route index               element={<StudentHome />}    />
+            <Route path="courses"      element={<CoursesTab />}     />
+            <Route path="todo"         element={<TodoTab />}        />
+            <Route path="leaderboard"  element={<LeaderboardTab />} />
+            <Route path="whiteboard"   element={<WhiteboardTab />}  />
+          </Routes>
+        </main>
+      </div>
+    </div>
   )
 }
