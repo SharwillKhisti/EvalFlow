@@ -1,28 +1,107 @@
-// frontend/src/pages/LoginPage.jsx
+// ============================================================
+//   LoginPage.jsx
+//   Place this file at: frontend/src/pages/LoginPage.jsx
+// ============================================================
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../api/client'
+import './LoginPage.css'
 
 function detectRole(email) {
-  const local  = email.split('@')[0]
-  const domain = email.split('@')[1]
+  const parts = email.split('@')
+  if (parts.length < 2) return null
+  const local  = parts[0]
+  const domain = parts[1]
   if (domain !== 'vit.edu') return null
   return /\d/.test(local) ? 'student' : 'instructor'
 }
 
+// ── Lucide-style inline SVGs ──────────────────────────────────
+const IconGrid = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+  </svg>
+)
+const IconLightbulb = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21h6M12 3a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V17a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-2.8C7.21 13.16 6 11.22 6 9a6 6 0 0 1 6-6z"/>
+  </svg>
+)
+const IconBarChart = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+  </svg>
+)
+const IconUsers = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+)
+const IconClipboard = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+  </svg>
+)
+const IconUser = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+)
+const IconEye = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+)
+const IconEyeOff = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+)
+const IconArrowRight = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </svg>
+)
+const IconInfo = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+)
+
+const FEATURES = [
+  { icon: <IconLightbulb />, title: 'AI Hints',            desc: 'Contextual guidance tailored to your logic.' },
+  { icon: <IconBarChart />,  title: 'Real-time Analytics', desc: 'Instant feedback on your performance metrics.' },
+  { icon: <IconUsers />,     title: 'Leaderboard',         desc: 'Collaborate and compete with your peer group.' },
+  { icon: <IconClipboard />, title: 'Auto-Quizzes',        desc: 'Quizzes dynamically generated from your code.' },
+]
+
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [tab, setTab]           = useState('login')
-  const [email, setEmail]       = useState('')
+
+  const [tab,      setTab]      = useState('login')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [error, setError]       = useState('')
-  const [message, setMessage]   = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [error,    setError]    = useState('')
+  const [message,  setMessage]  = useState('')
+  const [loading,  setLoading]  = useState(false)
   const [showPass, setShowPass] = useState(false)
 
   const detectedRole = detectRole(email)
   const emailValid   = detectedRole !== null || email === ''
+
+  const switchTab = (t) => { setTab(t); setError(''); setMessage('') }
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -46,164 +125,178 @@ export default function LoginPage() {
     setLoading(true)
     const { error: err } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: fullName, role: detectedRole } }
+      options: { data: { full_name: fullName, role: detectedRole } },
     })
     setLoading(false)
     if (err) { setError(err.message); return }
-    setMessage('Account created! You can now log in.')
+    setMessage('Account created. You can now log in.')
     setTab('login')
   }
 
   return (
-    <div className="page-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '16px' }}>
+    <div className="lp-root">
 
-      {/* Floating orbs */}
-      <div style={{ position: 'fixed', top: '10%', left: '5%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,197,253,0.4) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '15%', right: '8%', width: 250, height: 250, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      {/* Navbar */}
+      <nav className="lp-nav">
+        <a href="/" className="lp-logo">
+          <div className="lp-logo-mark"><IconGrid /></div>
+          <span className="lp-logo-name">EvalFlow</span>
+        </a>
+        <span className="lp-nav-help">
+          Need help?<a href="#">Documentation</a>
+        </span>
+      </nav>
 
-      <div style={{ display: 'flex', width: '100%', maxWidth: 960, gap: 32, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+      {/* Body */}
+      <div className="lp-body">
 
-        {/* Left — Branding panel */}
-        <div className="animate-fade-up" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 32, padding: '40px 20px' }}>
+        {/* Left */}
+        <div className="lp-left">
+          <h1 className="lp-headline">
+            Learn by doing,
+            <span className="lp-headline-accent">not by copying.</span>
+          </h1>
+          <p className="lp-subtext">
+            EvalFlow is a professional AI-assisted programming lab platform.
+            Master core concepts with real-time guided hints that help you think,
+            rather than just giving you the answer.
+          </p>
 
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, boxShadow: '0 8px 24px rgba(37,99,235,0.35)' }}>
-              🧪
-            </div>
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--text-primary)' }}>EvalFlow</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: -2 }}>VIT · Virtual Lab Assistant</div>
-            </div>
-          </div>
-
-          {/* Hero text */}
-          <div>
-            <h1 className="text-hero" style={{ marginBottom: 16, lineHeight: 1.15 }}>
-              Learn by<br />
-              <span style={{ color: 'var(--sky-600)' }}>doing,</span> not<br />
-              by copying.
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 340, fontSize: '0.95rem' }}>
-              Solve real coding problems with AI-guided hints. Your instructor sees how you think, not just what you submit.
-            </p>
-          </div>
-
-          {/* Feature pills */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { icon: '🤖', text: 'AI hints that guide, never spoil' },
-              { icon: '📊', text: 'Real-time performance analytics' },
-              { icon: '🏆', text: 'Leaderboard & achievement badges' },
-              { icon: '📝', text: 'Auto-generated quizzes per unit' },
-            ].map(({ icon, text }, i) => (
-              <div key={i} className={`animate-fade-up stagger-${i + 2}`}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(8px)', borderRadius: 100, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.8)', width: 'fit-content' }}>
-                <span style={{ fontSize: 16 }}>{icon}</span>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{text}</span>
+          <div className="lp-features">
+            {FEATURES.map(({ icon, title, desc }) => (
+              <div className="lp-feature" key={title}>
+                <div className="lp-feature-icon">{icon}</div>
+                <div>
+                  <div className="lp-feature-title">{title}</div>
+                  <div className="lp-feature-desc">{desc}</div>
+                </div>
               </div>
             ))}
           </div>
+
+          <div className="lp-partners">
+            <span className="lp-partner-tag">Partner A</span>
+            <span className="lp-partner-tag">Partner B</span>
+            <span className="lp-partner-tag">Partner C</span>
+          </div>
         </div>
 
-        {/* Right — Auth card */}
-        <div className="animate-fade-up stagger-2" style={{ width: 420, flexShrink: 0 }}>
-          <div style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderRadius: 'var(--radius-xl)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 20px 60px rgba(15,23,42,0.15)', padding: '36px 32px' }}>
+        {/* Right */}
+        <div className="lp-right">
+          <div className="lp-card-wrapper">
+          <div className="lp-card">
 
-            {/* Tab switcher */}
-            <div style={{ display: 'flex', background: 'var(--sky-50)', borderRadius: 100, padding: 4, marginBottom: 28, border: '1px solid var(--border-blue)' }}>
-              {['login', 'register'].map(t => (
-                <button key={t} onClick={() => { setTab(t); setError(''); setMessage('') }}
-                  style={{ flex: 1, padding: '9px 0', borderRadius: 100, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: '0.875rem', transition: 'all 0.2s ease', background: tab === t ? 'white' : 'transparent', color: tab === t ? 'var(--text-primary)' : 'var(--text-muted)', boxShadow: tab === t ? 'var(--shadow-sm)' : 'none' }}>
-                  {t === 'login' ? 'Log In' : 'Register'}
-                </button>
-              ))}
+            <h2 className="lp-card-heading">Welcome back</h2>
+            <p className="lp-card-sub">Please enter your credentials to access your lab.</p>
+
+            {/* Tabs */}
+            <div className="lp-tabs">
+              <button className={`lp-tab${tab === 'login'    ? ' active' : ''}`} onClick={() => switchTab('login')}>Log In</button>
+              <button className={`lp-tab${tab === 'register' ? ' active' : ''}`} onClick={() => switchTab('register')}>Register</button>
             </div>
 
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.35rem', marginBottom: 6 }}>
-              {tab === 'login' ? 'Welcome back 👋' : 'Create account ✨'}
-            </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 24 }}>
-              {tab === 'login' ? 'Sign in to your EvalFlow account' : 'Join EvalFlow with your VIT email'}
-            </p>
+            {message && <div className="lp-alert success" style={{ marginBottom: 16 }}>{message}</div>}
+            {error   && <div className="lp-alert error"   style={{ marginBottom: 16 }}>{error}</div>}
 
-            {/* Messages */}
-            {message && (
-              <div style={{ background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, color: '#15803D', fontSize: '0.85rem' }}>
-                ✅ {message}
-              </div>
-            )}
-            {error && (
-              <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, color: '#DC2626', fontSize: '0.85rem' }}>
-                ⚠️ {error}
-              </div>
-            )}
-
-            <form onSubmit={tab === 'login' ? handleLogin : handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form className="lp-form" onSubmit={tab === 'login' ? handleLogin : handleRegister}>
 
               {tab === 'register' && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Full Name</label>
-                  <input className="input" type="text" required value={fullName}
-                    onChange={e => setFullName(e.target.value)} placeholder="John Doe" />
+                <div className="lp-field">
+                  <label className="lp-label" htmlFor="fullname">Full Name</label>
+                  <input
+                    id="fullname" className="lp-input" type="text" required
+                    value={fullName} onChange={e => setFullName(e.target.value)}
+                    placeholder="John Doe" autoComplete="name"
+                  />
                 </div>
               )}
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>VIT Email</label>
-                <input className={`input ${email && !emailValid ? 'error' : ''}`}
-                  type="email" required value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="name.lastname24@vit.edu" />
+              <div className="lp-field">
+                <label className="lp-label" htmlFor="email">VIT Email Address</label>
+                <input
+                  id="email"
+                  className={`lp-input${email && !emailValid ? ' is-error' : ''}`}
+                  type="email" required
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="name.surname2024@vit.edu"
+                  autoComplete="email"
+                />
                 {email && detectedRole && (
-                  <div style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, background: detectedRole === 'student' ? 'var(--sky-100)' : '#EDE9FE', borderRadius: 100, padding: '3px 10px' }}>
-                    <span style={{ fontSize: 12 }}>{detectedRole === 'student' ? '🎓' : '👨‍🏫'}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: detectedRole === 'student' ? 'var(--sky-700)' : '#7C3AED' }}>
-                      {detectedRole === 'student' ? 'Student' : 'Instructor'} detected
-                    </span>
-                  </div>
+                  <span className={`lp-role-badge${detectedRole === 'student' ? ' is-student' : ''}`}>
+                    <IconUser />
+                    Role detected: {detectedRole === 'student' ? 'Student' : 'Instructor'}
+                  </span>
                 )}
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input className="input" type={showPass ? 'text' : 'password'}
-                    required value={password} onChange={e => setPassword(e.target.value)}
+              <div className="lp-field">
+                <div className="lp-label-row">
+                  <label className="lp-label" htmlFor="password">Password</label>
+                  {tab === 'login' && <a href="#" className="lp-forgot">Forgot password?</a>}
+                </div>
+                <div className="lp-pass-wrap">
+                  <input
+                    id="password" className="lp-input"
+                    type={showPass ? 'text' : 'password'} required
+                    value={password} onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••" minLength={6}
-                    style={{ paddingRight: 44 }} />
-                  <button type="button" onClick={() => setShowPass(s => !s)}
-                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16 }}>
-                    {showPass ? '🙈' : '👁️'}
+                    autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                  />
+                  <button type="button" className="lp-eye-btn" onClick={() => setShowPass(s => !s)}
+                    tabIndex={-1} aria-label={showPass ? 'Hide password' : 'Show password'}>
+                    {showPass ? <IconEyeOff /> : <IconEye />}
                   </button>
                 </div>
               </div>
 
-              <button type="submit" disabled={loading || (!!email && !detectedRole)}
-                className="btn btn-primary"
-                style={{ justifyContent: 'center', padding: '13px 20px', fontSize: '0.95rem', fontWeight: 600, marginTop: 4, borderRadius: 'var(--radius-sm)' }}>
+              {tab === 'login' && (
+                <div className="lp-checkbox-row">
+                  <input type="checkbox" id="remember" />
+                  <label className="lp-checkbox-label" htmlFor="remember">
+                    Keep me logged in for 30 days
+                  </label>
+                </div>
+              )}
+
+              <button
+                type="submit" className="lp-submit"
+                disabled={loading || (!!email && !detectedRole)}
+              >
                 {loading
-                  ? <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> Please wait...</>
-                  : tab === 'login' ? 'Sign In →' : 'Create Account →'
+                  ? <><div className="lp-spinner" />Please wait...</>
+                  : <>{tab === 'login' ? 'Sign In to EvalFlow' : 'Create Account'}<IconArrowRight /></>
                 }
               </button>
+
             </form>
 
-            <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 20 }}>
-              VIT students & faculty only · @vit.edu required
+            <div className="lp-divider" />
+
+            <a href="#" className="lp-academic">
+              <IconInfo />
+              Academic Institution Login
+            </a>
+
+            <p className="lp-legal">
+              By continuing, you agree to EvalFlow's{' '}
+              <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
             </p>
+
+          </div>
           </div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-          .login-split { flex-direction: column !important; }
-          .login-brand { display: none !important; }
-          .login-card { width: 100% !important; }
-        }
-      `}</style>
+      {/* Footer */}
+      <footer className="lp-footer">
+        <span className="lp-footer-copy">© 2024 EvalFlow Platform. All rights reserved.</span>
+        <div className="lp-footer-links">
+          <a href="#">System Status</a>
+          <a href="#">Security</a>
+          <a href="#">Contact</a>
+        </div>
+      </footer>
+
     </div>
   )
 }

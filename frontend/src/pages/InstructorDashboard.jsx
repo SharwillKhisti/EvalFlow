@@ -1,39 +1,114 @@
-// frontend/src/pages/InstructorDashboard.jsx
+// ============================================================
+//   InstructorDashboard.jsx
+//   Place at: frontend/src/pages/InstructorDashboard.jsx
+// ============================================================
+
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, NavLink } from 'react-router-dom'
 import { supabase } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import TopNav from '../components/layout/TopNav'
+import './InstructorDashboard.css'
 
-const NAV = [
-  { to: '/instructor',           icon: '🏠', label: 'Home',      end: true },
-  { to: '/instructor/courses',   icon: '📚', label: 'Courses'    },
-  { to: '/instructor/analytics', icon: '📊', label: 'Analytics'  },
-  { to: '/instructor/reports',   icon: '📋', label: 'Reports'    },
+// ── Icons ─────────────────────────────────────────────────────
+const IconGrid = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+  </svg>
+)
+const IconBell = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+)
+const IconPlus = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+)
+const IconTrendUp = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+  </svg>
+)
+const IconSparkle = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+  </svg>
+)
+const IconReport = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+  </svg>
+)
+const IconX = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+)
+
+// ── Helpers ───────────────────────────────────────────────────
+function initials(name = '') {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
+}
+
+// ── Bar chart data (mock — replace with real enrollment/score queries) ──
+const CHART_DATA = [
+  { label: 'Data Structures\nBatch B2',         assignment: 82, quiz: 58 },
+  { label: 'Python Programming\nBatch A1',       assignment: 90, quiz: 75 },
+  { label: 'Object Oriented\nBatch C3',          assignment: 70, quiz: 52 },
 ]
+
+function BarChart() {
+  const max = 100
+  return (
+    <div className="id-bar-chart">
+      {CHART_DATA.map(d => (
+        <div className="id-bar-group" key={d.label}>
+          <div className="id-bars">
+            <div className="id-bar assignment" style={{ height: `${(d.assignment / max) * 160}px` }} title={`Assignment avg: ${d.assignment}`} />
+            <div className="id-bar quiz"       style={{ height: `${(d.quiz / max) * 160}px`       }} title={`Quiz avg: ${d.quiz}`} />
+          </div>
+          <div className="id-bar-label">
+            {d.label.split('\n').map((line, i) => <div key={i}>{line}</div>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // ── Create Course Modal ───────────────────────────────────────
 function CreateCourseModal({ onClose, onCreated }) {
   const { user } = useAuthStore()
-  const [title, setTitle]   = useState('')
-  const [desc, setDesc]     = useState('')
-  const [slug, setSlug]     = useState('')
+  const [title,   setTitle]   = useState('')
+  const [desc,    setDesc]    = useState('')
+  const [slug,    setSlug]    = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState('')
+  const [error,   setError]   = useState('')
 
   const SLUGS = [
-    { value: 'python', label: '🐍 Python' },
-    { value: 'c',      label: '⚙️ C' },
-    { value: 'cpp',    label: '➕ C++' },
-    { value: 'ds',     label: '🌳 Data Structures' },
-    { value: 'oop',    label: '🧱 OOP' },
+    { value: 'python', label: 'Python'           },
+    { value: 'c',      label: 'C'                },
+    { value: 'cpp',    label: 'C++'              },
+    { value: 'ds',     label: 'Data Structures'  },
+    { value: 'oop',    label: 'OOP'              },
   ]
 
   async function handleCreate(e) {
     e.preventDefault()
     if (!title.trim()) return
     setLoading(true); setError('')
-    const { data, error: err } = await supabase.from('courses')
+    const { data, error: err } = await supabase
+      .from('courses')
       .insert({ title: title.trim(), description: desc.trim(), course_slug: slug || null, instructor_id: user.id })
       .select().single()
     setLoading(false)
@@ -41,36 +116,53 @@ function CreateCourseModal({ onClose, onCreated }) {
     onCreated(data)
   }
 
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box">
-        <h2 className="text-h2" style={{ marginBottom: 6 }}>Create New Course</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 24 }}>Set up a new course for your students</p>
-        {error && <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#DC2626', fontSize: '0.85rem' }}>{error}</div>}
-        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Course Title *</label>
-            <input className="input" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Data Structures & Algorithms" />
+    <div className="id-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="id-modal">
+        <div className="id-modal-title">Create New Course</div>
+        <div className="id-modal-sub">Set up a new course for your students.</div>
+
+        {error && <div className="id-alert-error">{error}</div>}
+
+        <form className="id-form" onSubmit={handleCreate}>
+          <div className="id-field">
+            <label className="id-label">Course Title</label>
+            <input className="id-input" required value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. Data Structures and Algorithms" />
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Course Type</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+
+          <div className="id-field">
+            <label className="id-label">Course Type</label>
+            <div className="id-slug-grid">
               {SLUGS.map(s => (
-                <button type="button" key={s.value} onClick={() => setSlug(s.value)}
-                  style={{ padding: '8px 6px', borderRadius: 10, border: `2px solid ${slug === s.value ? 'var(--sky-500)' : 'var(--border)'}`, background: slug === s.value ? 'var(--sky-50)' : 'white', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 500, color: slug === s.value ? 'var(--sky-700)' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+                <button type="button" key={s.value}
+                  className={`id-slug-btn${slug === s.value ? ' active' : ''}`}
+                  onClick={() => setSlug(s.value)}>
                   {s.label}
                 </button>
               ))}
             </div>
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Description</label>
-            <textarea className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Brief overview..." rows={3} style={{ resize: 'none' }} />
+
+          <div className="id-field">
+            <label className="id-label">Description</label>
+            <textarea className="id-input" value={desc}
+              onChange={e => setDesc(e.target.value)}
+              placeholder="Brief overview of this course..."
+              rows={3} style={{ resize: 'none' }} />
           </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-            <button type="button" onClick={onClose} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-            <button type="submit" disabled={loading || !title.trim()} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-              {loading ? 'Creating...' : '+ Create Course'}
+
+          <div className="id-modal-actions">
+            <button type="button" className="id-btn-ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="id-btn-primary" disabled={loading || !title.trim()}>
+              {loading ? 'Creating...' : <><IconPlus /> Create Course</>}
             </button>
           </div>
         </form>
@@ -79,75 +171,26 @@ function CreateCourseModal({ onClose, onCreated }) {
   )
 }
 
-// ── Instructor Stat Card ──────────────────────────────────────
-function IStatCard({ icon, label, value, sub, color = 'var(--sky-600)', delay = 1 }) {
-  return (
-    <div className={`stat-card animate-fade-up stagger-${delay}`}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-          {icon}
-        </div>
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
-      </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>{sub}</div>}
-    </div>
-  )
-}
-
-// ── Course card (instructor view) ─────────────────────────────
-function InstructorCourseCard({ course, onClick, index }) {
-  const slugColors = { python:'#3B82F6', c:'#8B5CF6', cpp:'#EC4899', ds:'#10B981', oop:'#F59E0B' }
-  const color = slugColors[course.course_slug] || '#3B82F6'
-
-  return (
-    <button onClick={onClick}
-      className={`animate-fade-up stagger-${(index % 4) + 2}`}
-      style={{ background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', padding: '20px', cursor: 'pointer', textAlign: 'left', boxShadow: 'var(--shadow-sm)', transition: 'all 0.25s ease', width: '100%' }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = color + '60' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📘</div>
-        <div style={{ background: color + '18', color: color, borderRadius: 100, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-          {course.join_code}
-        </div>
-      </div>
-
-      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.3 }}>
-        {course.title}
-      </h3>
-      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 14, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {course.description || 'No description'}
-      </p>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.75rem', color, fontWeight: 600 }}>Manage →</span>
-        {course.course_slug && <span className="badge" style={{ background: color + '15', color }}>{course.course_slug.toUpperCase()}</span>}
-      </div>
-    </button>
-  )
-}
-
 // ── Instructor Home ───────────────────────────────────────────
 function InstructorHome() {
-  const { user } = useAuthStore()
-  const navigate = useNavigate()
-  const [courses, setCourses]     = useState([])
-  const [showModal, setShowModal] = useState(false)
-  const [newCourse, setNewCourse] = useState(null)
-  const [loading, setLoading]     = useState(true)
+  const { user }  = useAuthStore()
+  const navigate  = useNavigate()
 
-  const fullName  = user?.user_metadata?.full_name || 'Instructor'
-  const firstName = fullName.split(' ')[0]
-  const hour      = new Date().getHours()
-  const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const [courses,    setCourses]    = useState([])
+  const [showModal,  setShowModal]  = useState(false)
+  const [newCourse,  setNewCourse]  = useState(null)
+  const [loading,    setLoading]    = useState(true)
+
+  const fullName = user?.user_metadata?.full_name || 'Instructor'
 
   useEffect(() => { fetchCourses() }, [])
 
   async function fetchCourses() {
     setLoading(true)
-    const { data } = await supabase.from('courses').select('*').eq('instructor_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('courses').select('*')
+      .eq('instructor_id', user.id)
+      .order('created_at', { ascending: false })
     setCourses(data || [])
     setLoading(false)
   }
@@ -158,88 +201,234 @@ function InstructorHome() {
     setNewCourse(course)
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {showModal && <CreateCourseModal onClose={() => setShowModal(false)} onCreated={handleCreated} />}
+  // Total students across all courses (mock — replace with real enrollment count)
+  const totalStudents = courses.length * 42
 
-      {/* Header */}
-      <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 4 }}>{greeting} ☀️</p>
-          <h1 className="text-h1">Welcome, Prof. {firstName}!</h1>
-        </div>
-        <button onClick={() => setShowModal(true)} className="btn btn-primary">
-          + New Course
-        </button>
+  return (
+    <div className="id-main">
+
+      {showModal && (
+        <CreateCourseModal
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
+
+      {/* Page header */}
+      <div>
+        <h1 className="id-page-heading">Welcome back, {fullName}</h1>
+        <p className="id-page-sub">
+          You are teaching {courses.length} active course{courses.length !== 1 ? 's' : ''} this semester.
+        </p>
       </div>
 
       {/* New course join code banner */}
       {newCourse && (
-        <div className="animate-fade-up" style={{ background: 'linear-gradient(135deg, #065F46, #047857)', borderRadius: 'var(--radius-md)', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white' }}>
+        <div className="id-join-banner">
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>✅ Course created! Share this code with your students:</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.6rem', letterSpacing: '0.15em' }}>{newCourse.join_code}</span>
-              <span style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>— {newCourse.title}</span>
+            <div className="id-join-banner-label">Course created. Share this code with your students:</div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span className="id-join-banner-code">{newCourse.join_code}</span>
+              <span className="id-join-banner-course">— {newCourse.title}</span>
             </div>
           </div>
-          <button onClick={() => setNewCourse(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          <button className="id-dismiss-btn" onClick={() => setNewCourse(null)}>
+            <IconX />
+          </button>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="bento bento-4">
-        <IStatCard icon="📚" label="COURSES" value={courses.length} sub="Active courses" delay={1} />
-        <IStatCard icon="👥" label="STUDENTS" value="—" sub="Total enrolled" color="#8B5CF6" delay={2} />
-        <IStatCard icon="📝" label="ASSIGNMENTS" value="—" sub="Generated & approved" color="#F59E0B" delay={3} />
-        <IStatCard icon="📊" label="AVG SCORE" value="—" sub="Class average" color="#10B981" delay={4} />
-      </div>
+      {/* Middle row: chart + active courses */}
+      <div className="id-mid">
 
-      {/* Courses grid */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h2 className="text-h2">My Courses</h2>
-          <button onClick={() => navigate('/instructor/courses')} className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>View all →</button>
+        {/* Course Performance Overview — dark card */}
+        <div className="id-card-dark">
+          <div className="id-chart-header">
+            <div>
+              <div className="id-chart-title">Course Performance Overview</div>
+              <div className="id-chart-sub">Comparative analysis of assignment vs quiz scores</div>
+            </div>
+            <div className="id-chart-legend">
+              <div className="id-legend-item">
+                <span className="id-legend-dot" style={{ background: '#2563eb' }} />
+                Avg Assignment Score
+              </div>
+              <div className="id-legend-item">
+                <span className="id-legend-dot" style={{ background: '#cbd5e1' }} />
+                Avg Quiz Score
+              </div>
+            </div>
+          </div>
+          <BarChart />
         </div>
 
-        {loading ? (
-          <div className="bento bento-3">
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />)}
+        {/* Active Courses list */}
+        <div className="id-card">
+          <div className="id-active-courses-title">
+            Active Courses
+            <button className="id-three-dots">···</button>
           </div>
-        ) : courses.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 24px', background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border-blue)' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
-            <p style={{ color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 8 }}>No courses yet</p>
-            <button onClick={() => setShowModal(true)} className="btn btn-primary">Create your first course</button>
-          </div>
-        ) : (
-          <div className="bento bento-3">
-            {courses.map((course, i) => (
-              <InstructorCourseCard key={course.id} course={course} index={i}
-                onClick={() => navigate(`/instructor/courses/${course.id}`)} />
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Bottom promo cards */}
-      <div className="bento bento-2">
-        <div className="card-blue animate-fade-up stagger-5">
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 6 }}>AI Assignment Generator</h3>
-            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>Auto-generate unit-wise coding assignments and theory quizzes from your syllabus. Review and approve in one click.</p>
-          </div>
-        </div>
-        <div className="card animate-fade-up stagger-6" style={{ background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)', border: '1px solid #FDE68A' }}>
-          <div style={{ fontSize: 28, marginBottom: 8 }}>📊</div>
-          <h3 className="text-h3" style={{ marginBottom: 6, color: '#92400E' }}>Analytics Dashboard</h3>
-          <p style={{ fontSize: '0.82rem', color: '#B45309', lineHeight: 1.6 }}>Track class performance, filter by division and batch, and identify students who need extra support.</p>
-          <button onClick={() => navigate('/instructor/analytics')} className="btn" style={{ marginTop: 12, background: '#F59E0B', color: 'white', padding: '8px 16px', fontSize: '0.8rem' }}>
-            View Analytics →
+          <div className="id-course-col-label">Course Name</div>
+
+          {loading ? (
+            [1,2,3].map(i => (
+              <div key={i} className="id-skeleton" style={{ height: 44, marginBottom: 8 }} />
+            ))
+          ) : courses.length === 0 ? (
+            <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '0.82rem', color: '#9ca3af' }}>
+              No courses yet.
+            </div>
+          ) : (
+            courses.slice(0, 4).map(course => (
+              <div
+                key={course.id}
+                className="id-course-row"
+                onClick={() => navigate(`/instructor/courses/${course.id}`)}
+              >
+                <div className="id-course-row-name">{course.title}</div>
+                <div className="id-course-row-meta">
+                  Enrolled: — students<br />
+                  Since {formatDate(course.created_at)}
+                </div>
+              </div>
+            ))
+          )}
+
+          <button className="id-view-all-btn" onClick={() => navigate('/instructor/courses')}>
+            View All Courses
           </button>
         </div>
       </div>
+
+      {/* Bottom row: 2 stat cards + analytics promo */}
+      <div className="id-bottom">
+
+        {/* Total Students */}
+        <div className="id-stat-card">
+          <div className="id-stat-label">Total Students</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div className="id-stat-value">{courses.length > 0 ? totalStudents : '—'}</div>
+            {courses.length > 0 && (
+              <div className="id-stat-delta">
+                <IconTrendUp /> +8%
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Global Avg Score */}
+        <div className="id-stat-card">
+          <div className="id-stat-label">Global Avg Score</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div className="id-stat-value">84.1</div>
+            <div className="id-stat-delta">
+              <IconTrendUp /> +3%
+            </div>
+          </div>
+        </div>
+
+        {/* Analytics promo */}
+        <div className="id-promo-card">
+          <div>
+            <div className="id-promo-label">Deep Insights and Tools</div>
+            <div className="id-promo-title">Analytics Dashboard</div>
+            <div className="id-promo-sub">
+              Intelligently generated by AI Assistant to provide real-time insights.
+            </div>
+          </div>
+          <div className="id-promo-btns">
+            <button className="id-promo-btn primary" onClick={() => navigate('/instructor/analytics')}>
+              <IconSparkle /> AI Assignment Generator
+            </button>
+            <button className="id-promo-btn secondary" onClick={() => navigate('/instructor/reports')}>
+              <IconReport /> View Detailed Report
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+// ── Courses Tab (full list) ───────────────────────────────────
+function CoursesTab() {
+  const { user }  = useAuthStore()
+  const navigate  = useNavigate()
+  const [courses,   setCourses]   = useState([])
+  const [showModal, setShowModal] = useState(false)
+  const [loading,   setLoading]   = useState(true)
+
+  useEffect(() => {
+    supabase.from('courses').select('*')
+      .eq('instructor_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setCourses(data || []); setLoading(false) })
+  }, [])
+
+  const SLUG_COLORS = { python:'#2563eb', c:'#7c3aed', cpp:'#db2777', ds:'#059669', oop:'#d97706' }
+
+  return (
+    <div className="id-main">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <h1 className="id-page-heading">My Courses</h1>
+        <button className="id-create-btn" onClick={() => setShowModal(true)}>
+          <IconPlus /> New Course
+        </button>
+      </div>
+
+      {showModal && (
+        <CreateCourseModal
+          onClose={() => setShowModal(false)}
+          onCreated={c => { setCourses(p => [c, ...p]); setShowModal(false) }}
+        />
+      )}
+
+      {loading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {[1,2,3].map(i => <div key={i} className="id-skeleton" style={{ height: 180 }} />)}
+        </div>
+      ) : courses.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 24px', background: '#fff', border: '1px dashed #d1d5db', borderRadius: 10 }}>
+          <p style={{ color: '#6b7280', marginBottom: 14 }}>No courses yet.</p>
+          <button className="id-btn-primary" style={{ display: 'inline-flex' }} onClick={() => setShowModal(true)}>
+            <IconPlus /> Create your first course
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {courses.map(course => {
+            const color = SLUG_COLORS[course.course_slug] || '#2563eb'
+            return (
+              <div key={course.id} className="id-card"
+                style={{ cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                onClick={() => navigate(`/instructor/courses/${course.id}`)}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.09)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 9, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                  </div>
+                  <span style={{ background: color + '18', color, borderRadius: 4, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                    {course.join_code}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827', marginBottom: 6, letterSpacing: '-0.01em' }}>
+                  {course.title}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5, marginBottom: 14,
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {course.description || 'No description provided.'}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color }}>Manage →</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -247,10 +436,11 @@ function InstructorHome() {
 // ── Analytics stub ────────────────────────────────────────────
 function AnalyticsTab() {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">📊</div>
-      <h1 className="text-h1" style={{ marginBottom: 8 }}>Analytics</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Division/batch performance graphs — coming in Phase 4.</p>
+    <div className="id-main">
+      <div className="id-stub">
+        <h1>Analytics</h1>
+        <p>Division and batch performance graphs — coming in Phase 4.</p>
+      </div>
     </div>
   )
 }
@@ -258,29 +448,90 @@ function AnalyticsTab() {
 // ── Reports stub ──────────────────────────────────────────────
 function ReportsTab() {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">📋</div>
-      <h1 className="text-h1" style={{ marginBottom: 8 }}>Reports</h1>
-      <p style={{ color: 'var(--text-muted)' }}>AI-generated assignment reports — available after student submissions.</p>
+    <div className="id-main">
+      <div className="id-stub">
+        <h1>Reports</h1>
+        <p>AI-generated assignment reports — available after student submissions.</p>
+      </div>
     </div>
+  )
+}
+
+// ── Navbar ────────────────────────────────────────────────────
+function Navbar({ onCreateCourse }) {
+  const { user } = useAuthStore()
+  const fullName = user?.user_metadata?.full_name || 'Instructor'
+
+  const links = [
+    { to: '/instructor',             label: 'Dashboard', end: true },
+    { to: '/instructor/courses',     label: 'Courses'              },
+    { to: '/instructor/analytics',   label: 'Analytics'            },
+  ]
+
+  return (
+    <nav className="id-nav">
+      <a href="/instructor" className="id-nav-logo">
+        <div className="id-nav-logo-mark"><IconGrid /></div>
+        <span className="id-nav-logo-name">EvalFlow</span>
+      </a>
+
+      <div className="id-nav-links">
+        {links.map(l => (
+          <NavLink key={l.to} to={l.to} end={l.end}
+            className={({ isActive }) => `id-nav-link${isActive ? ' active' : ''}`}>
+            {l.label}
+          </NavLink>
+        ))}
+      </div>
+
+      <div className="id-nav-right">
+        <button className="id-create-btn" onClick={onCreateCourse}>
+          <IconPlus /> Create Course
+        </button>
+        <div className="id-nav-icon-btn">
+          <IconBell />
+          <div className="id-nav-badge" />
+        </div>
+        <div className="id-nav-avatar">{initials(fullName)}</div>
+      </div>
+    </nav>
   )
 }
 
 // ── Root ──────────────────────────────────────────────────────
 export default function InstructorDashboard() {
+  const [showCreate, setShowCreate] = useState(false)
+  const [newCourse,  setNewCourse]  = useState(null)
+
   return (
-    <div className="page-bg">
-      <div className="app-shell">
-        <TopNav navItems={NAV} />
-        <main style={{ flex: 1 }}>
-          <Routes>
-            <Route index               element={<InstructorHome />} />
-            <Route path="courses"      element={<InstructorHome />} />
-            <Route path="analytics"    element={<AnalyticsTab />}   />
-            <Route path="reports"      element={<ReportsTab />}     />
-          </Routes>
-        </main>
+    <div className="id-shell">
+      <Navbar onCreateCourse={() => setShowCreate(true)} />
+
+      {showCreate && (
+        <CreateCourseModal
+          onClose={() => setShowCreate(false)}
+          onCreated={c => { setNewCourse(c); setShowCreate(false) }}
+        />
+      )}
+
+      <div style={{ flex: 1 }}>
+        <Routes>
+          <Route index              element={<InstructorHome  />} />
+          <Route path="courses"     element={<CoursesTab      />} />
+          <Route path="analytics"   element={<AnalyticsTab    />} />
+          <Route path="reports"     element={<ReportsTab      />} />
+        </Routes>
       </div>
+
+      <footer className="id-footer">
+        <span className="id-footer-copy">EvalFlow © 2024. Higher Learning Standard.</span>
+        <div className="id-footer-links">
+          <a href="#">Support</a>
+          <a href="#">API</a>
+          <a href="#">Terms</a>
+          <a href="#">Privacy</a>
+        </div>
+      </footer>
     </div>
   )
 }

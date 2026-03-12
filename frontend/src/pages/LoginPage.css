@@ -1,0 +1,574 @@
+/* ============================================================
+   LoginPage.css
+   Place this file at: frontend/src/pages/LoginPage.css
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Root ── */
+.lp-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f1f3f5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #111827;
+}
+
+/* ── Navbar ── */
+.lp-nav {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.lp-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.lp-logo-mark {
+  width: 34px;
+  height: 34px;
+  background: #2563eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-logo-mark svg {
+  width: 18px;
+  height: 18px;
+  color: #ffffff;
+}
+
+.lp-logo-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.025em;
+}
+
+.lp-nav-help {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.lp-nav-help a {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+  transition: color 0.15s;
+}
+
+.lp-nav-help a:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* ── Body ── */
+.lp-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Left panel ── */
+.lp-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 80px;
+  background: #f1f3f5;
+}
+
+.lp-headline {
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  color: #111827;
+  margin-bottom: 18px;
+}
+
+.lp-headline-accent {
+  color: #2563eb;
+  display: block;
+}
+
+.lp-subtext {
+  font-size: 0.925rem;
+  color: #4b5563;
+  line-height: 1.7;
+  max-width: 420px;
+  margin-bottom: 44px;
+}
+
+/* Feature grid */
+.lp-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 40px;
+  max-width: 460px;
+  margin-bottom: 52px;
+}
+
+.lp-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.lp-feature-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.lp-feature-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #2563eb;
+  stroke-width: 1.75;
+}
+
+.lp-feature-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.lp-feature-desc {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.55;
+}
+
+/* Partner tags */
+.lp-partners {
+  display: flex;
+  gap: 8px;
+}
+
+.lp-partner-tag {
+  padding: 5px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #ffffff;
+}
+
+/* ── Right panel ── */
+.lp-right {
+  width: 580px;
+  flex-shrink: 0;
+  background: #f1f3f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 44px;
+}
+
+.lp-card-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+  padding: 40px 40px 36px;
+  width: 100%;
+  max-width: 460px;
+}
+
+.lp-card {
+  width: 100%;
+}
+
+.lp-card-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+
+.lp-card-sub {
+  font-size: 0.83rem;
+  color: #6b7280;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+/* ── Tab switcher ── */
+.lp-tabs {
+  display: flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+.lp-tab {
+  flex: 1;
+  padding: 9px 0;
+  border: none;
+  cursor: pointer;
+  font-size: 0.855rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+  background: #ffffff;
+  color: #9ca3af;
+}
+
+.lp-tab:first-child {
+  border-right: 1px solid #e5e7eb;
+}
+
+.lp-tab.active {
+  background: #ffffff;
+  color: #111827;
+  font-weight: 700;
+}
+
+.lp-tab:not(.active):hover {
+  background: #f9fafb;
+  color: #374151;
+}
+
+/* ── Form ── */
+.lp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lp-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 7px;
+}
+
+.lp-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.lp-label-row .lp-label {
+  margin-bottom: 0;
+}
+
+.lp-forgot {
+  font-size: 0.78rem;
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-forgot:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.lp-input {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #111827;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  line-height: 1.5;
+}
+
+.lp-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.lp-input:focus {
+  border-color: #2563eb;
+  background: #f8faff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.lp-input.is-error {
+  border-color: #ef4444;
+}
+
+/* Password wrap */
+.lp-pass-wrap {
+  position: relative;
+}
+
+.lp-pass-wrap .lp-input {
+  padding-right: 42px;
+}
+
+.lp-eye-btn {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.lp-eye-btn:hover {
+  color: #374151;
+}
+
+.lp-eye-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
+}
+
+/* Role badge */
+.lp-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #7c3aed;
+}
+
+.lp-role-badge.is-student {
+  color: #2563eb;
+}
+
+.lp-role-badge svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+
+/* Checkbox row */
+.lp-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.lp-checkbox-row input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lp-checkbox-label {
+  font-size: 0.82rem;
+  color: #4b5563;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Messages */
+.lp-alert {
+  padding: 10px 13px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.lp-alert.success {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #15803d;
+}
+
+.lp-alert.error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+}
+
+/* Submit button */
+.lp-submit {
+  width: 100%;
+  padding: 11px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  margin-top: 2px;
+}
+
+.lp-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+}
+
+.lp-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.lp-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lp-submit svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+  flex-shrink: 0;
+}
+
+/* Spinner */
+.lp-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: lp-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes lp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Divider */
+.lp-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 20px 0 16px;
+}
+
+/* Academic link */
+.lp-academic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #6b7280;
+  text-decoration: none;
+  transition: color 0.15s;
+  margin-bottom: 20px;
+}
+
+.lp-academic:hover {
+  color: #374151;
+}
+
+.lp-academic svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.75;
+}
+
+/* Legal */
+.lp-legal {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.65;
+}
+
+.lp-legal a {
+  color: #6b7280;
+  text-decoration: underline;
+  transition: color 0.15s;
+}
+
+.lp-legal a:hover {
+  color: #374151;
+}
+
+/* ── Footer ── */
+.lp-footer {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 15px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lp-footer-copy {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lp-footer-links {
+  display: flex;
+  gap: 28px;
+}
+
+.lp-footer-links a {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 0.15s;
+}
+
+.lp-footer-links a:hover {
+  color: #374151;
+}

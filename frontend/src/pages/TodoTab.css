@@ -1,0 +1,511 @@
+/* ============================================================
+   TodoTab.css
+   Place at: frontend/src/pages/TodoTab.css
+   ============================================================ */
+
+/* ── Page layout ── */
+.td-page {
+  padding: 28px 28px 48px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.td-page-header {
+  margin-bottom: 24px;
+}
+
+.td-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.03em;
+  margin-bottom: 4px;
+}
+
+.td-page-sub {
+  font-size: 0.83rem;
+  color: #6b7280;
+}
+
+/* ── Create task row ── */
+.td-create-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.td-input {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.td-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.td-input::placeholder { color: #9ca3af; }
+
+.td-input-sm {
+  padding: 7px 11px;
+  font-size: 0.83rem;
+}
+
+.td-btn-primary {
+  padding: 9px 20px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.td-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+}
+
+.td-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.td-btn-primary svg { width: 15px; height: 15px; }
+
+.td-btn-ghost {
+  padding: 9px 16px;
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.td-btn-ghost:hover { background: #f9fafb; border-color: #9ca3af; }
+
+/* ── Status filter tabs ── */
+.td-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.td-filter-btn {
+  padding: 5px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #6b7280;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.td-filter-btn:hover { border-color: #9ca3af; color: #374151; }
+
+.td-filter-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+/* ── Cards grid ── */
+.td-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+/* ── Task card ── */
+.td-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+  position: relative;
+}
+
+.td-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+}
+
+.td-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.td-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.td-card-status {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.td-card-status.in-progress { background: #eff6ff; color: #2563eb; border-left: 2px solid #2563eb; }
+.td-card-status.almost-done { background: #f0fdf4; color: #16a34a; border-left: 2px solid #16a34a; }
+.td-card-status.not-started { background: #f8fafc; color: #64748b; border-left: 2px solid #94a3b8; }
+.td-card-status.completed   { background: #f0fdf4; color: #15803d; border-left: 2px solid #22c55e; }
+
+.td-card-course {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: -6px;
+}
+
+/* Progress in card */
+.td-card-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.td-card-progress-row strong {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.td-progress-track {
+  height: 5px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.td-progress-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.td-progress-fill.done { background: #22c55e; }
+
+/* Card footer */
+.td-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.td-card-subtask-count {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.td-card-subtask-count strong { color: #111827; }
+
+.td-view-btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+
+.td-view-btn:hover { color: #1d4ed8; }
+.td-view-btn svg { width: 12px; height: 12px; }
+
+/* ── Empty state ── */
+.td-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 56px 24px;
+  background: #fff;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+}
+
+.td-empty-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.td-empty p { font-size: 0.82rem; color: #9ca3af; }
+
+/* ── Modal overlay ── */
+.td-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: td-overlay-in 0.15s ease;
+}
+
+@keyframes td-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal ── */
+.td-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+  animation: td-modal-in 0.18s ease;
+  overflow: hidden;
+}
+
+@keyframes td-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.td-modal-head {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.td-modal-head-icon {
+  width: 36px;
+  height: 36px;
+  background: #eff6ff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.td-modal-head-icon svg {
+  width: 18px;
+  height: 18px;
+  color: #2563eb;
+}
+
+.td-modal-head-text { flex: 1; }
+
+.td-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
+
+.td-modal-course {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.td-modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: #f3f4f6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #6b7280;
+  transition: background 0.15s, color 0.15s;
+}
+
+.td-modal-close:hover { background: #e5e7eb; color: #111827; }
+.td-modal-close svg { width: 14px; height: 14px; }
+
+/* Modal progress section */
+.td-modal-progress {
+  padding: 16px 22px;
+  background: #f8faff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.td-modal-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.td-modal-progress-count {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.td-modal-progress-count strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.03em;
+  margin-right: 2px;
+}
+
+.td-modal-progress-pct {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.td-modal-track {
+  height: 7px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.td-modal-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* Subtask list */
+.td-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.td-subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.td-subtask-item:hover { border-color: #bfdbfe; background: #fafcff; }
+.td-subtask-item.done  { background: #fafafa; }
+
+.td-subtask-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid #d1d5db;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 11px;
+  color: #fff;
+}
+
+.td-subtask-check:hover { border-color: #2563eb; }
+.td-subtask-check.done  { background: #2563eb; border-color: #2563eb; }
+
+.td-subtask-text {
+  flex: 1;
+  font-size: 0.855rem;
+  color: #111827;
+  transition: color 0.15s;
+}
+
+.td-subtask-text.done {
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.td-subtask-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d1d5db;
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+  opacity: 0;
+}
+
+.td-subtask-item:hover .td-subtask-del { opacity: 1; }
+.td-subtask-del:hover { color: #ef4444; }
+
+/* Add subtask row */
+.td-add-subtask {
+  display: flex;
+  gap: 8px;
+  padding: 0 22px 16px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 12px;
+}
+
+/* Modal footer */
+.td-modal-foot {
+  padding: 14px 22px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 10px;
+}
+
+.td-modal-foot .td-btn-primary { flex: 1; justify-content: center; }
+.td-modal-foot .td-btn-ghost   { padding: 9px 20px; }

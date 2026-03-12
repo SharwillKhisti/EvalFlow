@@ -1,118 +1,163 @@
-// frontend/src/pages/StudentDashboard.jsx
+// ============================================================
+//   StudentDashboard.jsx
+//   Place at: frontend/src/pages/StudentDashboard.jsx
+// ============================================================
+
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, NavLink } from 'react-router-dom'
 import { supabase } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import TopNav from '../components/layout/TopNav'
+import './StudentDashboard.css'
 
-const NAV = [
-  { to: '/student',             icon: '🏠', label: 'Home',        end: true },
-  { to: '/student/courses',     icon: '📚', label: 'Courses'      },
-  { to: '/student/todo',        icon: '✅', label: 'To-Do'        },
-  { to: '/student/leaderboard', icon: '🏆', label: 'Leaderboard'  },
-  { to: '/student/whiteboard',  icon: '🎨', label: 'Whiteboard'   },
+// ── Icons (Lucide-style inline SVGs) ─────────────────────────
+const IconGrid = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+  </svg>
+)
+const IconSearch = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+)
+const IconBell = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+)
+const IconPlus = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+)
+const IconTarget = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+  </svg>
+)
+const IconCheckCircle = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+)
+const IconBarChart = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+  </svg>
+)
+const IconExternalLink = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+    <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+  </svg>
+)
+const IconArrowRight = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </svg>
+)
+
+// ── Course color themes ───────────────────────────────────────
+const COURSE_COLORS = [
+  { bg: '#1e3a5f', tag: 'Credit' },
+  { bg: '#14532d', tag: 'Elective' },
+  { bg: '#4c1d95', tag: 'Optional' },
+  { bg: '#78350f', tag: 'Credit' },
+  { bg: '#881337', tag: 'Elective' },
 ]
 
-// ── Shared fetch helper ───────────────────────────────────────
+// ── Avatar color pool ─────────────────────────────────────────
+const AVATAR_COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626']
+
+function avatarBg(i) { return AVATAR_COLORS[i % AVATAR_COLORS.length] }
+
+function initials(name = '') {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+// ── Shared fetch ──────────────────────────────────────────────
 async function fetchEnrolledCourses(userId) {
   const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select('course_id')
-    .eq('student_id', userId)
-
+    .from('enrollments').select('course_id').eq('student_id', userId)
   const courseIds = enrollments?.map(e => e.course_id) || []
-  if (courseIds.length === 0) return []
-
+  if (!courseIds.length) return []
   const { data: courses } = await supabase
-    .from('courses')
-    .select('id, title, description')
-    .in('id', courseIds)
-
+    .from('courses').select('id, title, description, instructor_id').in('id', courseIds)
   return courses || []
 }
 
-// ── Stat Card ─────────────────────────────────────────────────
-function StatCard({ icon, label, value, sub, color = 'var(--sky-600)', delay = 1 }) {
+// ── Donut chart ───────────────────────────────────────────────
+function Donut({ pct = 80 }) {
+  const r   = 54
+  const circ = 2 * Math.PI * r
+  const offset = circ - (pct / 100) * circ
   return (
-    <div className={`stat-card animate-fade-up stagger-${delay}`}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-          {icon}
-        </div>
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
+    <div className="sd-donut-wrap">
+      <svg viewBox="0 0 120 120">
+        <circle className="sd-donut-bg"   cx="60" cy="60" r={r} />
+        <circle className="sd-donut-fill" cx="60" cy="60" r={r}
+          strokeDasharray={circ} strokeDashoffset={offset} />
+      </svg>
+      <div className="sd-donut-center">
+        <div className="sd-donut-pct">{pct}%</div>
+        <div className="sd-donut-pct-label">overall progress</div>
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
-        {value}
-      </div>
-      {sub && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>{sub}</div>}
     </div>
   )
 }
 
-// ── Course Card ───────────────────────────────────────────────
-function CourseCard({ course, onClick, index }) {
-  const colors = [
-    { bg: 'linear-gradient(135deg, #1565C0, #1E40AF)' },
-    { bg: 'linear-gradient(135deg, #065F46, #047857)' },
-    { bg: 'linear-gradient(135deg, #6D28D9, #7C3AED)' },
-    { bg: 'linear-gradient(135deg, #92400E, #B45309)' },
-    { bg: 'linear-gradient(135deg, #9F1239, #BE123C)' },
-  ]
-  const c = colors[index % colors.length]
+// ── Bar chart (static demo data, replace with real) ───────────
+const CHART_DATA = [
+  { label: 'Unit 1', assignment: 75, quiz: 60 },
+  { label: 'Unit 2', assignment: 55, quiz: 80 },
+  { label: 'Unit 3', assignment: 88, quiz: 70 },
+  { label: 'Unit 4', assignment: 65, quiz: 55 },
+  { label: 'Unit 5', assignment: 78, quiz: 85 },
+]
 
+function BarChart() {
+  const max = 100
   return (
-    <button onClick={onClick}
-      className={`animate-fade-up stagger-${(index % 4) + 2}`}
-      style={{ background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', transition: 'all 0.25s ease', width: '100%' }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)' }}>
-      <div style={{ background: c.bg, padding: '20px 20px 16px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
-        <div style={{ position: 'absolute', bottom: -15, right: 20, width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-        <div style={{ fontSize: 28, marginBottom: 8 }}>📘</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'white', lineHeight: 1.3 }}>
-          {course.title}
+    <div className="sd-bar-chart">
+      {CHART_DATA.map(d => (
+        <div className="sd-bar-group" key={d.label}>
+          <div className="sd-bars">
+            <div className="sd-bar assignment" style={{ height: `${(d.assignment / max) * 116}px` }} title={`Assignment: ${d.assignment}`} />
+            <div className="sd-bar quiz"       style={{ height: `${(d.quiz / max) * 116}px`       }} title={`Quiz: ${d.quiz}`} />
+          </div>
+          <div className="sd-bar-label">{d.label}</div>
         </div>
-      </div>
-      <div style={{ padding: '14px 20px 16px' }}>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {course.description || 'No description provided'}
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--sky-600)', fontWeight: 600 }}>View course →</span>
-          <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--sky-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>→</div>
-        </div>
-      </div>
-    </button>
+      ))}
+    </div>
   )
 }
 
-// ── Home Tab ──────────────────────────────────────────────────
+// ── Student Home ──────────────────────────────────────────────
 function StudentHome() {
-  const { user } = useAuthStore()
-  const navigate = useNavigate()
-  const [courses, setCourses]   = useState([])
-  const [todos, setTodos]       = useState([])
+  const { user }   = useAuthStore()
+  const navigate   = useNavigate()
+  const [courses,  setCourses]  = useState([])
+  const [todos,    setTodos]    = useState([])
   const [joinCode, setJoinCode] = useState('')
-  const [joining, setJoining]   = useState(false)
-  const [joinMsg, setJoinMsg]   = useState({ text: '', type: '' })
-  const [loading, setLoading]   = useState(true)
+  const [joining,  setJoining]  = useState(false)
+  const [joinMsg,  setJoinMsg]  = useState({ text: '', type: '' })
+  const [loading,  setLoading]  = useState(true)
+  const [filter,   setFilter]   = useState('monthly')
 
   const fullName  = user?.user_metadata?.full_name || 'Student'
   const firstName = fullName.split(' ')[0]
-  const hour      = new Date().getHours()
-  const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
     setLoading(true)
-    const [courses, { data: todosData }] = await Promise.all([
+    const [c, { data: t }] = await Promise.all([
       fetchEnrolledCourses(user.id),
-      supabase.from('todos').select('*').eq('student_id', user.id).eq('is_done', false).limit(5)
+      supabase.from('todos').select('*').eq('student_id', user.id).eq('is_done', false).limit(5),
     ])
-    setCourses(courses)
-    setTodos(todosData || [])
+    setCourses(c)
+    setTodos(t || [])
     setLoading(false)
   }
 
@@ -123,178 +168,322 @@ function StudentHome() {
     setJoinMsg({ text: '', type: '' })
 
     const { data: course } = await supabase
-      .from('courses')
-      .select('id, title')
-      .eq('join_code', joinCode.trim().toUpperCase())
-      .single()
+      .from('courses').select('id, title')
+      .eq('join_code', joinCode.trim().toUpperCase()).single()
 
     if (!course) {
       setJoinMsg({ text: 'Invalid code. Check with your instructor.', type: 'error' })
-      setJoining(false)
-      return
+      setJoining(false); return
     }
 
     const { data: existing } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('course_id', course.id)
-      .eq('student_id', user.id)
-      .maybeSingle()
+      .from('enrollments').select('id')
+      .eq('course_id', course.id).eq('student_id', user.id).maybeSingle()
 
     if (existing) {
       setJoinMsg({ text: `Already enrolled in "${course.title}"`, type: 'error' })
-      setJoining(false)
-      return
+      setJoining(false); return
     }
 
     const { error } = await supabase
-      .from('enrollments')
-      .insert({ course_id: course.id, student_id: user.id })
+      .from('enrollments').insert({ course_id: course.id, student_id: user.id })
 
     setJoining(false)
     if (error) {
-      setJoinMsg({ text: 'Something went wrong.', type: 'error' })
+      setJoinMsg({ text: 'Something went wrong. Please try again.', type: 'error' })
     } else {
-      setJoinMsg({ text: `✅ Joined "${course.title}"!`, type: 'success' })
+      setJoinMsg({ text: `Joined "${course.title}" successfully.`, type: 'success' })
       setJoinCode('')
       fetchData()
     }
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+  // Mock pending tasks (replace with real data from submissions + todos)
+  const pendingTasks = [
+    { id: 1, title: 'Linked List Traversal',    course: 'Data Structures',    due: 'Tomorrow, 11:59 PM', status: 'critical' },
+    { id: 2, title: 'File I/O Operations',       course: 'Python Programming', due: 'Oct 24, 2024',       status: 'active'   },
+    { id: 3, title: 'Inheritance & Polymorphism',course: 'OOP Principles',     due: 'Oct 26, 2024',       status: 'upcoming' },
+    { id: 4, title: 'Binary Search Trees',       course: 'Data Structures',    due: 'Oct 30, 2024',       status: 'upcoming' },
+  ]
 
-      {/* Header */}
-      <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 4 }}>{greeting} ☀️</p>
-          <h1 className="text-h1">Welcome back, {firstName}!</h1>
+  // Mock leaderboard (replace with real leaderboard_scores query)
+  const leaderboard = [
+    { rank: 1, name: 'Alex Johnson', pts: 1420 },
+    { rank: 2, name: 'Sarah Chen',   pts: 1385 },
+    { rank: 3, name: firstName + ' (You)', pts: 1240, isMe: true },
+    { rank: 4, name: 'Marcus King',  pts: 1210 },
+  ]
+
+  return (
+    <div className="sd-main">
+
+      {/* Hero */}
+      <div className="sd-hero">
+        <div className="sd-hero-text">
+          <h1 className="sd-hero-heading">
+            Welcome back, <span>{firstName}.</span>
+          </h1>
+          <p className="sd-hero-sub">
+            You have <strong>{pendingTasks.filter(t => t.status === 'critical' || t.status === 'active').length} assignments</strong> due this week across {courses.length} courses.
+          </p>
         </div>
-        <form onSubmit={handleJoin} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="Enter join code" maxLength={8}
-            style={{ padding: '10px 16px', borderRadius: 100, border: '1.5px solid var(--border-blue)', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)', fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.1em', fontSize: '0.85rem', outline: 'none', width: 160 }} />
-          <button type="submit" disabled={joining || joinCode.length < 6} className="btn btn-primary" style={{ padding: '10px 20px' }}>
-            {joining ? '...' : '+ Join Course'}
+        <form className="sd-join-form" onSubmit={handleJoin}>
+          <input
+            className="sd-join-input"
+            value={joinCode}
+            onChange={e => setJoinCode(e.target.value.toUpperCase())}
+            placeholder="Enter join code"
+            maxLength={8}
+          />
+          <button type="submit" className="sd-hero-btn" disabled={joining || joinCode.length < 6}>
+            <IconPlus />
+            {joining ? 'Joining...' : 'Join a Course'}
           </button>
         </form>
       </div>
 
       {joinMsg.text && (
-        <div style={{ background: joinMsg.type === 'error' ? '#FEE2E2' : '#DCFCE7', border: `1px solid ${joinMsg.type === 'error' ? '#FCA5A5' : '#86EFAC'}`, borderRadius: 'var(--radius-sm)', padding: '10px 16px', fontSize: '0.85rem', color: joinMsg.type === 'error' ? '#DC2626' : '#15803D' }}>
-          {joinMsg.text}
-        </div>
+        <div className={`sd-alert ${joinMsg.type}`}>{joinMsg.text}</div>
       )}
 
-      {/* Stats */}
-      <div className="bento bento-4">
-        <StatCard icon="📚" label="ENROLLED"     value={courses.length} sub="Active courses"  delay={1} />
-        <StatCard icon="✅" label="PENDING TASKS" value={todos.length}   sub="To-do items"     color="#8B5CF6" delay={2} />
-        <StatCard icon="🏆" label="BADGES"        value="0"              sub="Earned so far"   color="#F59E0B" delay={3} />
-        <StatCard icon="🔥" label="STREAK"        value="1"              sub="Days active"     color="#EF4444" delay={4} />
+      {/* Stat row */}
+      <div className="sd-stats">
+        <div className="sd-stat-card">
+          <div className="sd-stat-top">
+            <span className="sd-stat-label">Total Points</span>
+            <div className="sd-stat-icon" style={{ background: '#eff6ff' }}>
+              <IconTarget style={{ color: '#2563eb' }} />
+            </div>
+          </div>
+          <div className="sd-stat-value">1,240 <span>/ 1,500</span></div>
+          <div className="sd-stat-sub"><strong>+120 pts</strong> this week</div>
+        </div>
+
+        <div className="sd-stat-card">
+          <div className="sd-stat-top">
+            <span className="sd-stat-label">Assignments Submitted</span>
+            <div className="sd-stat-icon" style={{ background: '#f0fdf4' }}>
+              <IconCheckCircle style={{ color: '#22c55e' }} />
+            </div>
+          </div>
+          <div className="sd-stat-value">8 <span>of 12 completed</span></div>
+          <div className="sd-stat-sub">4 remaining this semester</div>
+        </div>
+
+        <div className="sd-stat-card">
+          <div className="sd-stat-top">
+            <span className="sd-stat-label">Quiz Average</span>
+            <div className="sd-stat-icon" style={{ background: '#fff7ed' }}>
+              <IconBarChart style={{ color: '#f59e0b' }} />
+            </div>
+          </div>
+          <div className="sd-stat-value">74%</div>
+          <div className="sd-stat-sub"><strong>Class Avg. 68%</strong></div>
+        </div>
       </div>
 
-      {/* Main grid */}
-      <div className="bento bento-3">
+      {/* Middle: Chart + Donut */}
+      <div className="sd-mid">
 
-        {/* Courses — span 2 */}
-        <div className="col-span-2">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <h2 className="text-h2">My Courses</h2>
-            <button onClick={() => navigate('/student/courses')} className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>View all →</button>
+        {/* Assignment Performance chart */}
+        <div className="sd-card">
+          <div className="sd-chart-topbar">
+            <div>
+              <div className="sd-card-title">Assignment Performance</div>
+              <div className="sd-card-sub">Unit scores progression for current semester</div>
+            </div>
+            <div className="sd-chart-filters">
+              <select className="sd-chart-select">
+                <option>All Courses</option>
+                {courses.map(c => <option key={c.id}>{c.title}</option>)}
+              </select>
+              <button className={`sd-chart-filter-btn${filter === 'weekly'  ? ' active' : ''}`} onClick={() => setFilter('weekly')}>Weekly</button>
+              <button className={`sd-chart-filter-btn${filter === 'monthly' ? ' active' : ''}`} onClick={() => setFilter('monthly')}>Monthly</button>
+            </div>
           </div>
-          {loading ? (
-            <div className="bento bento-2">
-              {[1, 2].map(i => <div key={i} className="skeleton" style={{ height: 160, borderRadius: 'var(--radius-md)' }} />)}
-            </div>
-          ) : courses.length === 0 ? (
-            <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border-blue)', padding: '40px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>📚</div>
-              <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>No courses yet</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: 4 }}>Enter a join code above to get started</p>
-            </div>
-          ) : (
-            <div className="bento bento-2">
-              {courses.slice(0, 4).map((course, i) => (
-                <CourseCard key={course.id} course={course} index={i}
-                  onClick={() => navigate(`/student/courses/${course.id}`)} />
+          <div className="sd-chart-legend">
+            <div className="sd-legend-dot"><span style={{ background: '#2563eb' }} />Assignment</div>
+            <div className="sd-legend-dot"><span style={{ background: '#93c5fd' }} />Quiz</div>
+          </div>
+          <BarChart />
+        </div>
+
+        {/* Completion average donut */}
+        <div className="sd-card sd-donut-card">
+          <div className="sd-donut-label">Completion Average</div>
+          <Donut pct={80} />
+          <div className="sd-donut-caption">Exceeding personal milestones</div>
+          <div className="sd-donut-live">
+            <div className="sd-donut-live-dot" />
+            Live tracking active
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom: Pending Tasks + Leaderboard */}
+      <div className="sd-bottom">
+
+        {/* Pending Tasks */}
+        <div className="sd-card">
+          <div className="sd-table-header">
+            <div className="sd-card-title">Pending Tasks</div>
+            <button className="sd-view-all" onClick={() => navigate('/student/todo')}>View All</button>
+          </div>
+          <table className="sd-table">
+            <thead>
+              <tr>
+                <th>Task Name</th>
+                <th>Course</th>
+                <th>Due Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingTasks.map(task => (
+                <tr key={task.id}>
+                  <td>{task.title}</td>
+                  <td style={{ color: '#6b7280' }}>{task.course}</td>
+                  <td style={{ color: '#6b7280' }}>{task.due}</td>
+                  <td>
+                    <span className={`sd-status-tag ${task.status}`}>
+                      {task.status}
+                    </span>
+                  </td>
+                </tr>
               ))}
-            </div>
-          )}
+            </tbody>
+          </table>
         </div>
 
-        {/* Right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Quick todo */}
-          <div className="card animate-fade-up stagger-3">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <h3 className="text-h3">Pending Tasks</h3>
-              <button onClick={() => navigate('/student/todo')} className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '4px 8px' }}>All →</button>
-            </div>
-            {todos.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '16px 0' }}>All caught up! 🎉</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {todos.map(todo => (
-                  <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--sky-50)' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sky-400)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todo.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Leaderboard */}
+        <div className="sd-card">
+          <div className="sd-table-header">
+            <div className="sd-card-title">Leaderboard</div>
           </div>
-
-          {/* AI promo card */}
-          <div className="card-blue animate-fade-up stagger-4" style={{ flex: 1 }}>
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', marginBottom: 6 }}>AI Lab Assistant</h3>
-              <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>Stuck on an assignment? Get a contextual hint that guides you — not the answer.</p>
-              <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 100, padding: '6px 12px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)' }}>
-                ✨ Available on every assignment
+          {leaderboard.map((row, i) => (
+            <div key={row.rank} className={`sd-lb-row${row.isMe ? ' is-current' : ''}`}>
+              <div className="sd-lb-rank">{row.rank}</div>
+              <div className="sd-lb-avatar" style={{ background: avatarBg(i) }}>
+                {initials(row.name)}
               </div>
+              <div className="sd-lb-name">
+                {row.name}
+                {row.isMe && <><br /><span>Your rank</span></>}
+              </div>
+              <div className="sd-lb-pts">{row.pts.toLocaleString()}</div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
+
+      {/* My Courses */}
+      <div>
+        <div className="sd-courses-header">
+          <div className="sd-section-title">My Courses</div>
+          <button className="sd-view-all" onClick={() => navigate('/student/courses')}>
+            Explore more →
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="sd-courses-grid">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="sd-skeleton" style={{ height: 220 }} />
+            ))}
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="sd-empty">
+            <p>No courses yet. Enter a join code above to get started.</p>
+          </div>
+        ) : (
+          <div className="sd-courses-grid">
+            {courses.slice(0, 3).map((course, i) => {
+              const theme = COURSE_COLORS[i % COURSE_COLORS.length]
+              return (
+                <div
+                  key={course.id}
+                  className="sd-course-card"
+                  onClick={() => navigate(`/student/courses/${course.id}`)}
+                >
+                  <div className="sd-course-header" style={{ background: theme.bg }}>
+                    <div className="sd-course-tag">{theme.tag}</div>
+                    <div className="sd-course-title">{course.title}</div>
+                  </div>
+                  <div className="sd-course-body">
+                    <div className="sd-course-instructor-row">
+                      <div className="sd-course-instructor-avatar" style={{ background: avatarBg(i), color: '#fff' }}>
+                        {initials('Dr Instructor')}
+                      </div>
+                      <div className="sd-course-instructor-info">
+                        <div className="sd-course-instructor-label">Instructor</div>
+                        <div className="sd-course-instructor-name">Dr. Instructor</div>
+                      </div>
+                    </div>
+                    <div className="sd-progress-row">
+                      <span className="sd-progress-label">Progress</span>
+                      <span className="sd-progress-pct">65%</span>
+                    </div>
+                    <div className="sd-progress-track">
+                      <div className="sd-progress-fill" style={{ width: '65%' }} />
+                    </div>
+                    <button className="sd-course-open-btn">
+                      Open Course <IconExternalLink />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
 
 // ── Courses Tab ───────────────────────────────────────────────
 function CoursesTab() {
-  const { user } = useAuthStore()
-  const navigate = useNavigate()
+  const { user }   = useAuthStore()
+  const navigate   = useNavigate()
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchEnrolledCourses(user.id).then(data => {
-      setCourses(data)
-      setLoading(false)
-    })
+    fetchEnrolledCourses(user.id).then(d => { setCourses(d); setLoading(false) })
   }, [])
 
   return (
-    <div>
-      <h1 className="text-h1 animate-fade-up" style={{ marginBottom: 20 }}>My Courses</h1>
+    <div className="sd-main">
+      <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em', marginBottom: 16 }}>My Courses</h1>
       {loading ? (
-        <div className="bento bento-3">
-          {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />)}
+        <div className="sd-courses-grid">
+          {[1,2,3].map(i => <div key={i} className="sd-skeleton" style={{ height: 220 }} />)}
         </div>
       ) : courses.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 24px', background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
-          <p style={{ color: 'var(--text-secondary)' }}>You haven't joined any courses yet.</p>
-        </div>
+        <div className="sd-empty"><p>You have not joined any courses yet.</p></div>
       ) : (
-        <div className="bento bento-3">
-          {courses.map((course, i) => (
-            <CourseCard key={course.id} course={course} index={i}
-              onClick={() => navigate(`/student/courses/${course.id}`)} />
-          ))}
+        <div className="sd-courses-grid">
+          {courses.map((course, i) => {
+            const theme = COURSE_COLORS[i % COURSE_COLORS.length]
+            return (
+              <div key={course.id} className="sd-course-card" onClick={() => navigate(`/student/courses/${course.id}`)}>
+                <div className="sd-course-header" style={{ background: theme.bg }}>
+                  <div className="sd-course-tag">{theme.tag}</div>
+                  <div className="sd-course-title">{course.title}</div>
+                </div>
+                <div className="sd-course-body">
+                  <div className="sd-progress-row">
+                    <span className="sd-progress-label">Progress</span>
+                    <span className="sd-progress-pct">—</span>
+                  </div>
+                  <div className="sd-progress-track">
+                    <div className="sd-progress-fill" style={{ width: '0%' }} />
+                  </div>
+                  <button className="sd-course-open-btn">Open Course <IconExternalLink /></button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -303,13 +492,14 @@ function CoursesTab() {
 
 // ── Todo Tab ──────────────────────────────────────────────────
 function TodoTab() {
-  const { user } = useAuthStore()
-  const [todos, setTodos]     = useState([])
-  const [newTask, setNewTask] = useState('')
-  const [loading, setLoading] = useState(true)
+  const { user }  = useAuthStore()
+  const [todos,    setTodos]    = useState([])
+  const [newTask,  setNewTask]  = useState('')
+  const [loading,  setLoading]  = useState(true)
 
   useEffect(() => {
-    supabase.from('todos').select('*').eq('student_id', user.id).order('created_at', { ascending: false })
+    supabase.from('todos').select('*').eq('student_id', user.id)
+      .order('created_at', { ascending: false })
       .then(({ data }) => { setTodos(data || []); setLoading(false) })
   }, [])
 
@@ -317,99 +507,70 @@ function TodoTab() {
     e.preventDefault()
     if (!newTask.trim()) return
     const { data } = await supabase.from('todos')
-      .insert({ student_id: user.id, title: newTask.trim() })
-      .select().single()
-    if (data) { setTodos(prev => [data, ...prev]); setNewTask('') }
+      .insert({ student_id: user.id, title: newTask.trim() }).select().single()
+    if (data) { setTodos(p => [data, ...p]); setNewTask('') }
   }
 
   async function toggleTodo(id, isDone) {
     await supabase.from('todos').update({ is_done: !isDone }).eq('id', id)
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, is_done: !isDone } : t))
+    setTodos(p => p.map(t => t.id === id ? { ...t, is_done: !isDone } : t))
   }
 
   async function deleteTodo(id) {
     await supabase.from('todos').delete().eq('id', id)
-    setTodos(prev => prev.filter(t => t.id !== id))
+    setTodos(p => p.filter(t => t.id !== id))
   }
 
   const pending   = todos.filter(t => !t.is_done)
   const completed = todos.filter(t =>  t.is_done)
-  const pct       = todos.length ? Math.round((completed.length / todos.length) * 100) : 0
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto' }}>
-      <div className="animate-fade-up" style={{ marginBottom: 24 }}>
-        <h1 className="text-h1" style={{ marginBottom: 4 }}>To-Do List</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Track your tasks and study goals</p>
+    <div className="sd-main">
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em', marginBottom: 4 }}>To-Do</h1>
+        <p style={{ fontSize: '0.82rem', color: '#6b7280' }}>Track your tasks and study goals.</p>
       </div>
 
-      {todos.length > 0 && (
-        <div className="card animate-fade-up stagger-1" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Overall Progress</span>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--sky-600)' }}>{pct}%</span>
-          </div>
-          <div className="progress-track"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 8 }}>{completed.length} of {todos.length} tasks completed</p>
-        </div>
-      )}
+      <div className="sd-todo-wrap">
+        <form className="sd-todo-input-row" onSubmit={addTodo}>
+          <input className="sd-input" value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="Add a new task..." />
+          <button className="sd-btn-primary" type="submit" disabled={!newTask.trim()}>Add Task</button>
+        </form>
 
-      <form onSubmit={addTodo} className="animate-fade-up stagger-2" style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-        <input value={newTask} onChange={e => setNewTask(e.target.value)}
-          placeholder="Add a new task..." className="input" style={{ flex: 1 }} />
-        <button type="submit" disabled={!newTask.trim()} className="btn btn-primary">Add</button>
-      </form>
-
-      {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 52, borderRadius: 10 }} />)}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {pending.length > 0 && (
-            <div>
-              <p className="text-label" style={{ marginBottom: 10 }}>Pending · {pending.length}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {pending.map(todo => (
-                  <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'white', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                    <button onClick={() => toggleTodo(todo.id, todo.is_done)}
-                      style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--sky-300)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
-                      onMouseEnter={e => e.target.style.borderColor = 'var(--sky-500)'}
-                      onMouseLeave={e => e.target.style.borderColor = 'var(--sky-300)'} />
-                    <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{todo.title}</span>
-                    <button onClick={() => deleteTodo(todo.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1, padding: '0 4px' }}
-                      onMouseEnter={e => e.target.style.color = '#EF4444'}
-                      onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>×</button>
+        {loading ? (
+          [1,2,3].map(i => <div key={i} className="sd-skeleton" style={{ height: 46, marginBottom: 8 }} />)
+        ) : (
+          <>
+            {pending.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div className="sd-todo-group-label">Pending · {pending.length}</div>
+                {pending.map(t => (
+                  <div key={t.id} className="sd-todo-item">
+                    <button className="sd-todo-check" onClick={() => toggleTodo(t.id, t.is_done)} />
+                    <span className="sd-todo-title">{t.title}</span>
+                    <button className="sd-todo-del" onClick={() => deleteTodo(t.id)}>×</button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-          {completed.length > 0 && (
-            <div>
-              <p className="text-label" style={{ marginBottom: 10 }}>Completed · {completed.length}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {completed.map(todo => (
-                  <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F0FDF4', borderRadius: 10, padding: '12px 16px', border: '1px solid #86EFAC', opacity: 0.8 }}>
-                    <button onClick={() => toggleTodo(todo.id, todo.is_done)}
-                      style={{ width: 22, height: 22, borderRadius: '50%', background: '#22C55E', border: 'none', cursor: 'pointer', color: 'white', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
-                    <span style={{ flex: 1, fontSize: '0.875rem', color: '#64748B', textDecoration: 'line-through' }}>{todo.title}</span>
-                    <button onClick={() => deleteTodo(todo.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: 18 }}>×</button>
+            )}
+            {completed.length > 0 && (
+              <div>
+                <div className="sd-todo-group-label">Completed · {completed.length}</div>
+                {completed.map(t => (
+                  <div key={t.id} className="sd-todo-item" style={{ opacity: 0.7 }}>
+                    <button className="sd-todo-check done" onClick={() => toggleTodo(t.id, t.is_done)}>✓</button>
+                    <span className="sd-todo-title done">{t.title}</span>
+                    <button className="sd-todo-del" onClick={() => deleteTodo(t.id)}>×</button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-          {todos.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 24px', background: 'rgba(255,255,255,0.6)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-              <p style={{ color: 'var(--text-secondary)' }}>No tasks yet. Add one above!</p>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {todos.length === 0 && (
+              <div className="sd-empty"><p>No tasks yet. Add one above.</p></div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -417,10 +578,11 @@ function TodoTab() {
 // ── Leaderboard stub ──────────────────────────────────────────
 function LeaderboardTab() {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">🏆</div>
-      <h1 className="text-h1" style={{ marginBottom: 8 }}>Leaderboard</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Rankings will appear here once assignments are submitted.</p>
+    <div className="sd-main">
+      <div className="sd-stub">
+        <h1>Leaderboard</h1>
+        <p>Rankings will appear here once assignments are submitted.</p>
+      </div>
     </div>
   )
 }
@@ -428,33 +590,87 @@ function LeaderboardTab() {
 // ── Whiteboard stub ───────────────────────────────────────────
 function WhiteboardTab() {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-      <div style={{ fontSize: 56, marginBottom: 12 }} className="animate-float">🎨</div>
-      <h1 className="text-h1" style={{ marginBottom: 8 }}>Whiteboard</h1>
-      <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Excalidraw whiteboard — coming in Phase 4.</p>
-      <div style={{ height: 320, background: 'rgba(255,255,255,0.6)', border: '2px dashed var(--border-blue)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Whiteboard canvas coming soon</p>
+    <div className="sd-main">
+      <div className="sd-stub">
+        <h1>Whiteboard</h1>
+        <p>Excalidraw canvas — coming in Phase 4.</p>
+        <div style={{ width: '100%', maxWidth: 600, height: 280, background: '#fff', border: '1px dashed #d1d5db', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
+          <span style={{ fontSize: '0.83rem', color: '#9ca3af' }}>Canvas coming soon</span>
+        </div>
       </div>
     </div>
+  )
+}
+
+// ── Navbar ────────────────────────────────────────────────────
+function Navbar() {
+  const { user } = useAuthStore()
+  const fullName = user?.user_metadata?.full_name || 'Student'
+
+  const links = [
+    { to: '/student',             label: 'Dashboard', end: true },
+    { to: '/student/courses',     label: 'Courses'              },
+    { to: '/student/todo',        label: 'To-Do'                },
+    { to: '/student/whiteboard',  label: 'Whiteboard'           },
+  ]
+
+  return (
+    <nav className="sd-nav">
+      <a href="/student" className="sd-nav-logo">
+        <div className="sd-nav-logo-mark"><IconGrid /></div>
+        <span className="sd-nav-logo-name">EvalFlow</span>
+      </a>
+
+      <div className="sd-nav-search">
+        <IconSearch />
+        <input type="text" placeholder="Search resources..." />
+      </div>
+
+      <div className="sd-nav-links">
+        {links.map(l => (
+          <NavLink key={l.to} to={l.to} end={l.end}
+            className={({ isActive }) => `sd-nav-link${isActive ? ' active' : ''}`}>
+            {l.label}
+          </NavLink>
+        ))}
+      </div>
+
+      <div className="sd-nav-right">
+        <div className="sd-nav-icon-btn">
+          <IconBell />
+          <div className="sd-nav-badge" />
+        </div>
+        <div className="sd-nav-avatar">{initials(fullName)}</div>
+      </div>
+    </nav>
   )
 }
 
 // ── Root ──────────────────────────────────────────────────────
 export default function StudentDashboard() {
   return (
-    <div className="page-bg">
-      <div className="app-shell">
-        <TopNav navItems={NAV} />
-        <main style={{ flex: 1, minHeight: 0 }}>
-          <Routes>
-            <Route index               element={<StudentHome />}    />
-            <Route path="courses"      element={<CoursesTab />}     />
-            <Route path="todo"         element={<TodoTab />}        />
-            <Route path="leaderboard"  element={<LeaderboardTab />} />
-            <Route path="whiteboard"   element={<WhiteboardTab />}  />
-          </Routes>
-        </main>
+    <div className="sd-shell">
+      <Navbar />
+
+      <div style={{ flex: 1 }}>
+        <Routes>
+          <Route index              element={<StudentHome />}    />
+          <Route path="courses"     element={<CoursesTab />}     />
+          <Route path="todo"        element={<TodoTab />}        />
+          <Route path="leaderboard" element={<LeaderboardTab />} />
+          <Route path="whiteboard"  element={<WhiteboardTab />}  />
+        </Routes>
       </div>
+
+      <footer className="sd-footer">
+        <span className="sd-footer-copy">EvalFlow © 2024. Higher Learning Standard.</span>
+        <div className="sd-footer-links">
+          <a href="#">Support</a>
+          <a href="#">API</a>
+          <a href="#">Terms</a>
+          <a href="#">Privacy</a>
+        </div>
+      </footer>
     </div>
   )
 }
